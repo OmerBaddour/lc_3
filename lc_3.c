@@ -286,9 +286,9 @@ int main(int argc, const char *argv[]) {
         15-12 11 10 9 8-0
         0000  n  z  p PCoffset9
         */
-        uint16_t n = (instruction >> 10) & 0x1;
-        uint16_t z = (instruction >> 9) & 0x1;
-        uint16_t p = (instruction >> 8) & 0x1;
+        uint16_t n = (instruction >> 11) & 0x1;
+        uint16_t z = (instruction >> 10) & 0x1;
+        uint16_t p = (instruction >> 9) & 0x1;
         uint16_t pc_offset_9 = instruction & 0x1FF;
         if (
           (n & (registers[R_COND] == FL_NEG))
