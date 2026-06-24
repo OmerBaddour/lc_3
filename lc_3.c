@@ -215,7 +215,7 @@ int main(int argc, const char *argv[]) {
     uint16_t operation = instruction >> 12;
 
     switch (operation) {
-      case OP_ADD:
+      case OP_ADD: {
         /*
         15-12 11-9 8-6 5 4-3 2-0
         0001   DR  SR1 0 00  SR2
@@ -241,7 +241,8 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = registers[source_register_1] + other_value;
         update_register_condition_flags(destination_register);
         break;
-      case OP_AND:
+      }
+      case OP_AND: {
         /*
         15-12 11-9 8-6 5 4-3 2-0
         0101   DR  SR1 0 00  SR2
@@ -267,7 +268,8 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = registers[source_register_1] & other_value;
         update_register_condition_flags(destination_register);
         break;
-      case OP_NOT:
+      }
+      case OP_NOT: {
         /*
         15-12 11-9 8-6 5 4-0
         1001   DR  SR  1 1111
@@ -278,7 +280,8 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = result;
         update_register_condition_flags(destination_register);
         break;
-      case OP_BR:
+      }
+      case OP_BR: {
         /*
         15-12 11 10 9 8-0
         0000  n  z  p PCoffset9
@@ -295,7 +298,8 @@ int main(int argc, const char *argv[]) {
           registers[R_PC] += sign_extend(pc_offset_9, 9);
         }
         break;
-      case OP_JMP:
+      }
+      case OP_JMP: {
         /*
         15-12 11-9 8-6   5-0
         1100  000  BaseR 000000
@@ -304,7 +308,8 @@ int main(int argc, const char *argv[]) {
         uint16_t base_register = (instruction >> 6) & 0x7;
         registers[R_PC] = registers[base_register];
         break;
-      case OP_JSR:
+      }
+      case OP_JSR: {
         /*
         15-12 11 10-0
         0100  1  PCoffset11
@@ -326,7 +331,8 @@ int main(int argc, const char *argv[]) {
           registers[R_PC] = registers[base_register];
         }
         break;
-      case OP_LD:
+      }
+      case OP_LD: {
         /*
         15-12 11-9 8-0
         0010  DR   PCoffset9
@@ -338,10 +344,11 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = memory_value;
         update_register_condition_flags(destination_register);
         break;
-      case OP_LDI:
+      }
+      case OP_LDI: {
         /*
         15-12 11-9 8-0
-        0101   DR  PCoffset9
+        1010   DR  PCoffset9
         */
         uint16_t destination_register = (instruction >> 9) & 0x7;
         uint16_t pc_offset_9 = instruction & 0x1FF;
@@ -351,7 +358,8 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = memory_value;
         update_register_condition_flags(destination_register);
         break;
-      case OP_LDR:
+      }
+      case OP_LDR: {
         /*
         15-12 11-9 8-6   6-0
         0110   DR  BaseR offset6
@@ -361,10 +369,11 @@ int main(int argc, const char *argv[]) {
         uint16_t offset_6 = instruction & 0x3F;
         uint16_t memory_address = registers[base_register] + sign_extend(offset_6, 6);
         uint16_t memory_value = read_memory(memory_address);
-        registers[destination_register] = memory_value
+        registers[destination_register] = memory_value;
         update_register_condition_flags(destination_register);
         break;
-      case OP_LEA:
+      }
+      case OP_LEA: {
         /*
         15-12 11-9 8-0
         1110   DR  PCoffset9
@@ -375,7 +384,8 @@ int main(int argc, const char *argv[]) {
         registers[destination_register] = effective_address;
         update_register_condition_flags(destination_register);
         break;
-      case OP_ST:
+      }
+      case OP_ST: {
         /*
         15-12 11-9 8-0
         0011   SR  PCoffset9
@@ -385,7 +395,8 @@ int main(int argc, const char *argv[]) {
         uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
         write_memory(memory_address, registers[source_register]);
         break;
-      case OP_STI:
+      }
+      case OP_STI: {
         /*
         15-12 11-9 8-0
         1011   SR  PCoffset9
@@ -396,7 +407,8 @@ int main(int argc, const char *argv[]) {
         uint16_t memory_address_2 = read_memory(memory_address_1);
         write_memory(memory_address_2, registers[source_register]);
         break;
-      case OP_STR:
+      }
+      case OP_STR: {
         /*
         15-12 11-9 8-6   5-0
         0111   SR  BaseR offset6
@@ -404,10 +416,11 @@ int main(int argc, const char *argv[]) {
         uint16_t source_register = (instruction >> 9) & 0x7;
         uint16_t base_register = (instruction >> 6) & 0x7;
         uint16_t offset_6 = instruction & 0x3F;
-        uint16_t memory_address = registers[base_register] + sign_extend(pc_offset_6, 6);
+        uint16_t memory_address = registers[base_register] + sign_extend(offset_6, 6);
         write_memory(memory_address, registers[source_register]);
         break;
-      case OP_TRAP:
+      }
+      case OP_TRAP: {
         /*
         15-12 11-8 8-0
         1111  0000 trapvect8
@@ -416,16 +429,18 @@ int main(int argc, const char *argv[]) {
         uint16_t trapvect_8 = instruction & 0xFF;
 
         switch (trapvect_8) {
-          case TRAP_GETC:
+          case TRAP_GETC: {
             int character = getc(stdin);
             registers[R_R0] = (uint16_t)character;
             update_register_condition_flags(R_R0);
             break;
-          case TRAP_OUT:
+          }
+          case TRAP_OUT: {
             putc((char)registers[R_R0], stdout);
             fflush(stdout);
             break;
-          case TRAP_PUTS:
+          }
+          case TRAP_PUTS: {
             /* one character per word */
             uint16_t* character = memory + registers[R_R0];
             while (*character) {
@@ -434,36 +449,38 @@ int main(int argc, const char *argv[]) {
             }
             fflush(stdout);
             break;
-          case TRAP_IN:
+          }
+          case TRAP_IN: {
             printf("Enter character: ");
             int character = getc(stdin);
             registers[R_R0] = (uint16_t)character;
             putc((char)character, stdout);
             fflush(stdout);
             break;
-          case TRAP_PUTSP:
-            /* two characters per word */
-            uint16_t* character = memory + registers[R_R0];
-            while (*character) {
-              putc((char)*character, stdout);
-              uint16_t* second_character = character >> 8;
+          }
+          case TRAP_PUTSP: {
+            /* two characters per word: low byte first, then high byte */
+            uint16_t* word = memory + registers[R_R0];
+            while (*word) {
+              char first_character = (*word) & 0xFF;
+              putc(first_character, stdout);
+              char second_character = (*word) >> 8;
               if (second_character) {
-                putc((char)*second_character, stdout);
+                putc(second_character, stdout);
               }
-              ++character;
+              ++word;
             }
             fflush(stdout);
             break;
-          case TRAP_HALT:
+          }
+          case TRAP_HALT: {
             printf("Halting\n");
             running = 0;
             break;
+          }
         }
-
-        uint16_t trapvect_8 = instruction & 0xFF;
-        uint16_t memory_address = read_memory(trapvect_8);
-        registers[R_PC] = memory_address;
         break;
+      }
       case OP_RES:
       case OP_RTI:
       default:
