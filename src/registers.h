@@ -32,4 +32,10 @@ extern uint16_t registers[R_COUNT];
 
 void update_register_condition_flags(uint16_t destination_register);
 
+/* memory mapped registers */
+enum {
+  MR_KBSR = 0xFE00,  /* keyboard status */
+  MR_KBDR = 0xFE02  /* keyboard data */
+};
+
 #endif /* REGISTERS_H */

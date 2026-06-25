@@ -15,12 +15,6 @@
 #include "registers.h"
 #include "memory.h"
 
-/* memory mapped registers */
-enum {
-  MR_KBSR = 0xFE00,  /* keyboard status */
-  MR_KBDR = 0xFE02  /* keyboard data */
-};
-
 /* trap codes */
 enum
 {
