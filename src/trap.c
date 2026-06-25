@@ -6,5 +6,5 @@
 void trap_getc(uint16_t registers[]) {
   int character = getc(stdin);
   registers[R_R0] = (uint16_t)character;
-  update_register_condition_flags(R_R0);
+  update_register_condition_flags(registers, R_R0);
 }

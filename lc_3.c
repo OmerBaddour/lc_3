@@ -187,7 +187,7 @@ int main(int argc, const char *argv[]) {
           other_value = registers[source_register_2];
         }
         registers[destination_register] = registers[source_register_1] + other_value;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_AND: {
@@ -214,7 +214,7 @@ int main(int argc, const char *argv[]) {
           other_value = registers[source_register_2];
         }
         registers[destination_register] = registers[source_register_1] & other_value;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_NOT: {
@@ -226,7 +226,7 @@ int main(int argc, const char *argv[]) {
         uint16_t source_register = (instruction >> 6) & 0x7;
         uint16_t result = ~registers[source_register];
         registers[destination_register] = result;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_BR: {
@@ -290,7 +290,7 @@ int main(int argc, const char *argv[]) {
         uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
         uint16_t memory_value = read_memory(memory_address);
         registers[destination_register] = memory_value;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_LDI: {
@@ -304,7 +304,7 @@ int main(int argc, const char *argv[]) {
         uint16_t memory_address_2 = read_memory(memory_address_1);
         uint16_t memory_value = read_memory(memory_address_2);
         registers[destination_register] = memory_value;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_LDR: {
@@ -318,7 +318,7 @@ int main(int argc, const char *argv[]) {
         uint16_t memory_address = registers[base_register] + sign_extend(offset_6, 6);
         uint16_t memory_value = read_memory(memory_address);
         registers[destination_register] = memory_value;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_LEA: {
@@ -330,7 +330,7 @@ int main(int argc, const char *argv[]) {
         uint16_t pc_offset_9 = instruction & 0x1FF;
         uint16_t effective_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
         registers[destination_register] = effective_address;
-        update_register_condition_flags(destination_register);
+        update_register_condition_flags(registers, destination_register);
         break;
       }
       case OP_ST: {

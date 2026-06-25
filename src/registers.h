@@ -30,7 +30,10 @@ enum {
 /* registers: declared here, defined once in registers.c */
 extern uint16_t registers[R_COUNT];
 
-void update_register_condition_flags(uint16_t destination_register);
+void update_register_condition_flags(
+    uint16_t registers[],
+    uint16_t destination_register
+);
 
 /* memory mapped registers */
 enum {

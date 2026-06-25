@@ -3,24 +3,24 @@
 #include "registers.h"
 
 static void test_set_positive_flag(void) {
-  uint16_t destination_register = R_R0;
-  registers[destination_register] = 0x0FFF;
-  update_register_condition_flags(destination_register);
-  assert(registers[R_COND] == FL_POS);
+  uint16_t registers_local[R_COUNT] = {0};
+  registers_local[R_R0] = 0x0FFF;
+  update_register_condition_flags(registers_local, R_R0);
+  assert(registers_local[R_COND] == FL_POS);
 }
 
 static void test_set_zero_flag(void) {
-  uint16_t destination_register = R_R0;
-  registers[destination_register] = 0;
-  update_register_condition_flags(destination_register);
-  assert(registers[R_COND] == FL_ZRO);
+  uint16_t registers_local[R_COUNT] = {0};
+  registers_local[R_R0] = 0;
+  update_register_condition_flags(registers_local, R_R0);
+  assert(registers_local[R_COND] == FL_ZRO);
 }
 
 static void test_set_negative_flag(void) {
-  uint16_t destination_register = R_R0;
-  registers[destination_register] = 0xF000;
-  update_register_condition_flags(destination_register);
-  assert(registers[R_COND] == FL_NEG);
+  uint16_t registers_local[R_COUNT] = {0};
+  registers_local[R_R0] = 0xF000;
+  update_register_condition_flags(registers_local, R_R0);
+  assert(registers_local[R_COND] == FL_NEG);
 }
 
 int main(void) {
