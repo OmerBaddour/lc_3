@@ -1,8 +1,8 @@
 CC := gcc
-CFLAGS := -Isrc
+CFLAGS := -Isrc -fno-common -Wall -Wextra
 
 ALL_TARGETS := lc_3
-OBJS := lc_3.o src/registers.o src/memory.o
+OBJS := lc_3.o src/registers.o src/memory.o src/trap.o
 
 all: $(ALL_TARGETS)
 
