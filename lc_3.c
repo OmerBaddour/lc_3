@@ -13,6 +13,7 @@
 /* END macOS specific stuff for reading from keyboard */
 
 #include "registers.h"
+#include "memory.h"
 
 /* memory mapped registers */
 enum {
@@ -30,10 +31,6 @@ enum
   TRAP_PUTSP = 0x24, /* output a byte string */
   TRAP_HALT = 0x25   /* halt the program */
 };
-
-/* memory */
-#define MEMORY_MAX (1 << 16)
-uint16_t memory[MEMORY_MAX];  /* 2^16 = 65536 locations */
 
 /* operations */
 enum {

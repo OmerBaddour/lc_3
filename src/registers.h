@@ -27,7 +27,7 @@ enum {
   FL_NEG = 1 << 2,  /* negative */
 };
 
-/* the register file: declared here, defined once in registers.c */
+/* registers: declared here, defined once in registers.c */
 extern uint16_t registers[R_COUNT];
 
 void update_register_condition_flags(uint16_t destination_register);

@@ -2,7 +2,7 @@ CC := gcc
 CFLAGS := -Isrc
 
 ALL_TARGETS := lc_3
-OBJS := lc_3.o src/registers.o
+OBJS := lc_3.o src/registers.o src/memory.o
 
 all: $(ALL_TARGETS)
 

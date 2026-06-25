@@ -1,6 +1,6 @@
 #include "registers.h"
 
-/* the one real definition of the register file */
+/* the one real definition of the registers */
 uint16_t registers[R_COUNT];
 
 void update_register_condition_flags(uint16_t destination_register) {
