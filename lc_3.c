@@ -12,6 +12,8 @@
 #include <sys/mman.h>
 /* END macOS specific stuff for reading from keyboard */
 
+#include "registers.h"
+
 /* memory mapped registers */
 enum {
   MR_KBSR = 0xFE00,  /* keyboard status */
@@ -32,31 +34,6 @@ enum
 /* memory */
 #define MEMORY_MAX (1 << 16)
 uint16_t memory[MEMORY_MAX];  /* 2^16 = 65536 locations */
-
-/* registers */
-enum {
-  /* general purpose registers */
-  R_R0 = 0,
-  R_R1,
-  R_R2,
-  R_R3,
-  R_R4,
-  R_R5,
-  R_R6,
-  R_R7,
-  
-  R_PC,     /* program counter */
-  R_COND,   /* condition flags */
-  R_COUNT   /* sentinel element, trick to get register count */
-};
-uint16_t registers[R_COUNT];
-
-/* condition flags */
-enum {
-  FL_POS = 1 << 0,  /* positive */
-  FL_ZRO = 1 << 1,  /* zero */
-  FL_NEG = 1 << 2,  /* negative */
-};
 
 /* operations */
 enum {
@@ -85,16 +62,6 @@ uint16_t sign_extend(uint16_t x, int bit_count) {
     x = x | (0xFFFF << bit_count);
   }
   return x;
-}
-
-void update_register_condition_flags(uint16_t destination_register) {
-  if (registers[destination_register] == 0) {
-    registers[R_COND] = FL_ZRO;
-  } else if (registers[destination_register] >> (16 - 1)) {  /* negative means most significant bit is a 1 */
-    registers[R_COND] = FL_NEG;
-  } else {
-    registers[R_COND] = FL_POS;
-  }
 }
 
 /* BEGIN macOS specific stuff for reading from keyboard */
