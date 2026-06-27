@@ -8,3 +8,8 @@ void trap_getc(uint16_t registers[], FILE *file) {
   registers[R_R0] = (uint16_t)character;
   update_register_condition_flags(registers, R_R0);
 }
+
+void trap_out(uint16_t registers[], FILE *file) {
+  putc((char)registers[R_R0], file);
+  fflush(file);
+}

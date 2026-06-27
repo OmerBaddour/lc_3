@@ -382,8 +382,7 @@ int main(int argc, const char *argv[]) {
             break;
           }
           case TRAP_OUT: {
-            putc((char)registers[R_R0], stdout);
-            fflush(stdout);
+            trap_out(registers, stdout);
             break;
           }
           case TRAP_PUTS: {
