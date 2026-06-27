@@ -15,6 +15,6 @@ enum
 };
 
 /* trap functions */
-void trap_getc(uint16_t registers[]);
+void trap_getc(uint16_t registers[], FILE *file);
 
 #endif /* TRAP_H */

@@ -378,7 +378,7 @@ int main(int argc, const char *argv[]) {
 
         switch (trapvect_8) {
           case TRAP_GETC: {
-            trap_getc(registers);
+            trap_getc(registers, stdin);
             break;
           }
           case TRAP_OUT: {
