@@ -1,4 +1,5 @@
 scratchpad/
+.DS_Store
 *.obj
 *.o
 lc_3
