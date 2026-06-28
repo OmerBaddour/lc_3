@@ -13,3 +13,17 @@ void trap_out(uint16_t registers[], FILE *file) {
   putc((char)registers[R_R0], file);
   fflush(file);
 }
+
+void trap_puts(
+    uint16_t memory[],
+    uint16_t registers[],
+    FILE *file
+) {
+  /* one character per word */
+  uint16_t* character = memory + registers[R_R0];
+  while (*character) {
+    putc((char)*character, file);
+    ++character;
+  }
+  fflush(file);
+}

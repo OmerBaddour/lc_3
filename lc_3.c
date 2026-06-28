@@ -386,13 +386,7 @@ int main(int argc, const char *argv[]) {
             break;
           }
           case TRAP_PUTS: {
-            /* one character per word */
-            uint16_t* character = memory + registers[R_R0];
-            while (*character) {
-              putc((char)*character, stdout);
-              ++character;
-            }
-            fflush(stdout);
+            trap_puts(memory, registers, stdout);
             break;
           }
           case TRAP_IN: {
