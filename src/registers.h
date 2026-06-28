@@ -28,7 +28,7 @@ enum {
 };
 
 /* address the program counter starts at by convention */
-enum { PC_START = 0x3000 };
+enum { USER_SPACE_START = 0x3000 };
 
 /* registers: declared here, defined once in registers.c */
 extern uint16_t registers[R_COUNT];

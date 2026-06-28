@@ -11,17 +11,18 @@
 #include "util.h"
 
 int main(int argc, const char *argv[]) {
-  /* load arguments */
-  if (argc < 2) {
+  /* load the single image argument */
+  if (argc != 2) {
     /* show usage string */
-    printf("lc3 [image-file-1] ...\n");
+    printf("lc3 [image-file]\n");
     exit(2);
   }
-  for (int j = 1; j < argc; ++j) {
-    if (!read_image(argv[j])) {
-      printf("failed to load image: %s\n", argv[j]);
-      exit(1);
-    }
+  /* execution begins at the image's origin; a valid origin is always
+     >= USER_SPACE_START, so 0 unambiguously signals a load failure */
+  uint16_t origin = read_image(argv[1]);
+  if (!origin) {
+    printf("failed to load image: %s\n", argv[1]);
+    exit(1);
   }
 
   /* setup */
@@ -32,8 +33,8 @@ int main(int argc, const char *argv[]) {
   /* set zero condition flag arbitrarily */
   registers[R_COND] = FL_ZRO;
 
-  /* set program counter */
-  registers[R_PC] = PC_START;
+  /* set program counter to where the image was actually loaded */
+  registers[R_PC] = origin;
 
   int running = 1;
   while (running) {
