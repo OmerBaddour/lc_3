@@ -39,3 +39,22 @@ void trap_in(
   putc((char)character, file_output);
   fflush(file_output);
 }
+
+void trap_putsp(
+  uint16_t memory[],
+  uint16_t registers[],
+  FILE *file
+) {
+  /* two characters per word: low byte first, then high byte */
+  uint16_t* word = memory + registers[R_R0];
+  while (*word) {
+    char first_character = (*word) & 0xFF;
+    putc(first_character, file);
+    char second_character = (*word) >> 8;
+    if (second_character) {
+      putc(second_character, file);
+    }
+    ++word;
+  }
+  fflush(file);
+}

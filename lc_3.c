@@ -394,18 +394,7 @@ int main(int argc, const char *argv[]) {
             break;
           }
           case TRAP_PUTSP: {
-            /* two characters per word: low byte first, then high byte */
-            uint16_t* word = memory + registers[R_R0];
-            while (*word) {
-              char first_character = (*word) & 0xFF;
-              putc(first_character, stdout);
-              char second_character = (*word) >> 8;
-              if (second_character) {
-                putc(second_character, stdout);
-              }
-              ++word;
-            }
-            fflush(stdout);
+            trap_putsp(memory, registers, stdout);
             break;
           }
           case TRAP_HALT: {

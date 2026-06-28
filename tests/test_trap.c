@@ -30,6 +30,7 @@ static void test_trap_puts(void) {
   for (size_t i = 0; i < sizeof expected; ++i) {
     memory_local[i] = (uint16_t)expected[i];
   }
+
   uint16_t registers_local[R_COUNT] = {0};
   registers_local[R_R0] = 0; /* string starts at address 0 */
 
@@ -58,11 +59,41 @@ static void test_trap_in(void) {
   fclose(mock_stdout);
 }
 
+static void test_trap_putsp(void) {
+  const char expected[] = "Hello";
+  /* two chars per word; sizeof includes the '\0', so the last word is the null terminator */
+  uint16_t memory_local[sizeof expected] = {0};
+  size_t index_expected = 0;
+  size_t index_memory = 0;
+  while (index_expected < sizeof expected) {
+    if (index_expected % 2 == 0) {
+      memory_local[index_memory] = expected[index_expected];
+    } else {
+      memory_local[index_memory] = memory_local[index_memory] | (expected[index_expected] << 8);
+      index_memory += 1;
+    }
+    index_expected += 1;
+  }
+
+  uint16_t registers_local[R_COUNT] = {0};
+  registers_local[R_R0] = 0; /* string starts at address 0 */
+
+  char buffer[64] = {0};
+  FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
+  trap_putsp(memory_local, registers_local, mock_stdout);
+  long written = ftell(mock_stdout); /* exact number of bytes emitted */
+  fclose(mock_stdout);
+
+  assert(written == (long)strlen(expected));
+  assert(memcmp(buffer, expected, written) == 0); /* bounded by written, never over-reads */
+}
+
 int main(void) {
   test_trap_getc();
   test_trap_out();
   test_trap_puts();
   test_trap_in();
+  test_trap_putsp();
   printf("test_trap passed\n");
   return 0;
 }
