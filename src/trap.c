@@ -27,3 +27,15 @@ void trap_puts(
   }
   fflush(file);
 }
+
+void trap_in(
+    uint16_t registers[],
+    FILE *file_input,
+    FILE *file_output
+) {
+  fprintf(file_output, "Enter character: ");
+  int character = getc(file_input);
+  registers[R_R0] = (uint16_t)character;
+  putc((char)character, file_output);
+  fflush(file_output);
+}

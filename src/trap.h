@@ -22,5 +22,10 @@ void trap_puts(
     uint16_t registers[],
     FILE *file
 );
+void trap_in(
+    uint16_t registers[],
+    FILE *file_input,
+    FILE *file_output
+);
 
 #endif /* TRAP_H */

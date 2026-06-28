@@ -43,10 +43,26 @@ static void test_trap_puts(void) {
   assert(memcmp(buffer, expected, written) == 0); /* bounded by written, never over-reads */
 }
 
+static void test_trap_in(void) {
+  uint16_t registers_local[R_COUNT] = {0};
+  char buffer_stdin[] = "A";
+  FILE *mock_stdin = fmemopen(buffer_stdin, sizeof(buffer_stdin), "r");
+  char buffer_stdout[64] = {0};
+  FILE *mock_stdout = fmemopen(buffer_stdout, sizeof(buffer_stdout), "w");
+  trap_in(registers_local, mock_stdin, mock_stdout);
+  
+  assert(registers_local[R_R0] == (uint16_t)'A');
+  assert(strcmp(buffer_stdout, "Enter character: A") == 0);
+
+  fclose(mock_stdin);
+  fclose(mock_stdout);
+}
+
 int main(void) {
   test_trap_getc();
   test_trap_out();
   test_trap_puts();
+  test_trap_in();
   printf("test_trap passed\n");
   return 0;
 }

@@ -390,11 +390,7 @@ int main(int argc, const char *argv[]) {
             break;
           }
           case TRAP_IN: {
-            printf("Enter character: ");
-            int character = getc(stdin);
-            registers[R_R0] = (uint16_t)character;
-            putc((char)character, stdout);
-            fflush(stdout);
+            trap_in(registers, stdin, stdout);
             break;
           }
           case TRAP_PUTSP: {
