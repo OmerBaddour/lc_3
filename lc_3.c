@@ -10,26 +10,6 @@
 #include "io.h"
 #include "util.h"
 
-/* operations */
-enum {
-  OP_BR = 0,  /* branch */
-  OP_ADD,     /* add */
-  OP_LD,      /* load */
-  OP_ST,      /* store */
-  OP_JSR,     /* jump register */
-  OP_AND,     /* bitwise and */
-  OP_LDR,     /* load register */
-  OP_STR,     /* store register */
-  OP_RTI,     /* unused */
-  OP_NOT,     /* bitwise not */
-  OP_LDI,     /* load indirect */
-  OP_STI,     /* store indirect */
-  OP_JMP,     /* jump */
-  OP_RES,     /* reserved (unused) */
-  OP_LEA,     /* load effective address */
-  OP_TRAP     /* execute trap */
-};
-
 int main(int argc, const char *argv[]) {
   /* load arguments */
   if (argc < 2) {
@@ -53,13 +33,12 @@ int main(int argc, const char *argv[]) {
   registers[R_COND] = FL_ZRO;
 
   /* set program counter */
-  enum { PC_START = 0x3000 };  /* TODO: figure out why this isn't just `#define`d as a constant */
   registers[R_PC] = PC_START;
 
   int running = 1;
   while (running) {
     /* FETCH */
-    uint16_t instruction = read_memory(registers[R_PC]++);
+    uint16_t instruction = read_memory(memory, registers[R_PC]++);
     uint16_t operation = instruction >> 12;
 
     switch (operation) {
@@ -88,15 +67,15 @@ int main(int argc, const char *argv[]) {
         break;
       }
       case OP_LD: {
-        operation_ld(instruction, registers);
+        operation_ld(instruction, registers, memory);
         break;
       }
       case OP_LDI: {
-        operation_ldi(instruction, registers);
+        operation_ldi(instruction, registers, memory);
         break;
       }
       case OP_LDR: {
-        operation_ldr(instruction, registers);
+        operation_ldr(instruction, registers, memory);
         break;
       }
       case OP_LEA: {
@@ -104,15 +83,15 @@ int main(int argc, const char *argv[]) {
         break;
       }
       case OP_ST: {
-        operation_st(instruction, registers);
+        operation_st(instruction, registers, memory);
         break;
       }
       case OP_STI: {
-        operation_sti(instruction, registers);
+        operation_sti(instruction, registers, memory);
         break;
       }
       case OP_STR: {
-        operation_str(instruction, registers);
+        operation_str(instruction, registers, memory);
         break;
       }
       case OP_TRAP: {

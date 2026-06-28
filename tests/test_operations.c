@@ -3,10 +3,9 @@
 #include <assert.h>
 #include "operations.h"
 #include "registers.h"
-#include "memory.h"
 
-/* the memory-touching ops read/write the global `memory[]` from memory.c;
-   tests drive that array directly (normal addresses never hit the keyboard path) */
+/* memory-touching ops take a memory[] array; each test owns a local one, so
+   tests stay isolated (normal addresses never hit the keyboard path) */
 
 /* build an instruction with op in 15-12, dr in 11-9, sr1 in 8-6, imm5 mode */
 static uint16_t encode_imm(uint16_t op, uint16_t dr, uint16_t sr1, uint16_t imm5) {
@@ -119,67 +118,73 @@ static void test_operation_lea(void) {
 
 static void test_operation_ld(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_PC] = 0x3000;
-  memory[0x3004] = 0xABCD;
+  uint16_t memory_local[16] = {0};
+  registers_local[R_PC] = 0;
+  memory_local[4] = 0xABCD;
   /* LD R0, #4: op=0010 dr=000 PCoffset9 */
   uint16_t instruction = (0x2 << 12) | (R_R0 << 9) | 0x004;
-  operation_ld(instruction, registers_local);
+  operation_ld(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0xABCD);
   assert(registers_local[R_COND] == FL_NEG); /* high bit set */
 }
 
 static void test_operation_ldi(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_PC] = 0x3000;
-  memory[0x3004] = 0x4000;  /* pointer */
-  memory[0x4000] = 0x0042;  /* value */
+  uint16_t memory_local[16] = {0};
+  registers_local[R_PC] = 0;
+  memory_local[4] = 8;       /* pointer */
+  memory_local[8] = 0x0042;  /* value */
   /* LDI R0, #4: op=1010 dr=000 PCoffset9 */
   uint16_t instruction = (0xA << 12) | (R_R0 << 9) | 0x004;
-  operation_ldi(instruction, registers_local);
+  operation_ldi(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0x0042);
   assert(registers_local[R_COND] == FL_POS);
 }
 
 static void test_operation_ldr(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_R1] = 0x4000;
-  memory[0x4003] = 0x0007;
+  uint16_t memory_local[16] = {0};
+  registers_local[R_R1] = 2;
+  memory_local[5] = 0x0007;
   /* LDR R0, R1, #3: op=0110 dr=000 baseR=001 offset6 */
   uint16_t instruction = (0x6 << 12) | (R_R0 << 9) | (R_R1 << 6) | 0x03;
-  operation_ldr(instruction, registers_local);
+  operation_ldr(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0x0007);
   assert(registers_local[R_COND] == FL_POS);
 }
 
 static void test_operation_st(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_PC] = 0x3000;
+  uint16_t memory_local[16] = {0};
+  registers_local[R_PC] = 0;
   registers_local[R_R0] = 0x1234;
   /* ST R0, #4: op=0011 sr=000 PCoffset9 */
   uint16_t instruction = (0x3 << 12) | (R_R0 << 9) | 0x004;
-  operation_st(instruction, registers_local);
-  assert(memory[0x3004] == 0x1234);
+  operation_st(instruction, registers_local, memory_local);
+  assert(memory_local[4] == 0x1234);
 }
 
 static void test_operation_sti(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_PC] = 0x3000;
+  uint16_t memory_local[16] = {0};
+  registers_local[R_PC] = 0;
   registers_local[R_R0] = 0x9999;
-  memory[0x3004] = 0x4000;  /* pointer */
+  memory_local[4] = 8;  /* pointer */
   /* STI R0, #4: op=1011 sr=000 PCoffset9 */
   uint16_t instruction = (0xB << 12) | (R_R0 << 9) | 0x004;
-  operation_sti(instruction, registers_local);
-  assert(memory[0x4000] == 0x9999);
+  operation_sti(instruction, registers_local, memory_local);
+  assert(memory_local[8] == 0x9999);
 }
 
 static void test_operation_str(void) {
   uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_R1] = 0x4000;
+  uint16_t memory_local[16] = {0};
+  registers_local[R_R1] = 2;
   registers_local[R_R0] = 0x5678;
   /* STR R0, R1, #3: op=0111 sr=000 baseR=001 offset6 */
   uint16_t instruction = (0x7 << 12) | (R_R0 << 9) | (R_R1 << 6) | 0x03;
-  operation_str(instruction, registers_local);
-  assert(memory[0x4003] == 0x5678);
+  operation_str(instruction, registers_local, memory_local);
+  assert(memory_local[5] == 0x5678);
 }
 
 int main(void) {

@@ -141,7 +141,7 @@ void operation_lea(uint16_t instruction, uint16_t registers[]){
   update_register_condition_flags(registers, destination_register);
 }
 
-void operation_ld(uint16_t instruction, uint16_t registers[]){
+void operation_ld(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-0
   0010  DR   PCoffset9
@@ -149,12 +149,12 @@ void operation_ld(uint16_t instruction, uint16_t registers[]){
   uint16_t destination_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
   uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
-  uint16_t memory_value = read_memory(memory_address);
+  uint16_t memory_value = read_memory(memory, memory_address);
   registers[destination_register] = memory_value;
   update_register_condition_flags(registers, destination_register);
 }
 
-void operation_ldi(uint16_t instruction, uint16_t registers[]){
+void operation_ldi(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-0
   1010   DR  PCoffset9
@@ -162,13 +162,13 @@ void operation_ldi(uint16_t instruction, uint16_t registers[]){
   uint16_t destination_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
   uint16_t memory_address_1 = registers[R_PC] + sign_extend(pc_offset_9, 9);
-  uint16_t memory_address_2 = read_memory(memory_address_1);
-  uint16_t memory_value = read_memory(memory_address_2);
+  uint16_t memory_address_2 = read_memory(memory, memory_address_1);
+  uint16_t memory_value = read_memory(memory, memory_address_2);
   registers[destination_register] = memory_value;
   update_register_condition_flags(registers, destination_register);
 }
 
-void operation_ldr(uint16_t instruction, uint16_t registers[]){
+void operation_ldr(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-6   6-0
   0110   DR  BaseR offset6
@@ -177,12 +177,12 @@ void operation_ldr(uint16_t instruction, uint16_t registers[]){
   uint16_t base_register = (instruction >> 6) & 0x7;
   uint16_t offset_6 = instruction & 0x3F;
   uint16_t memory_address = registers[base_register] + sign_extend(offset_6, 6);
-  uint16_t memory_value = read_memory(memory_address);
+  uint16_t memory_value = read_memory(memory, memory_address);
   registers[destination_register] = memory_value;
   update_register_condition_flags(registers, destination_register);
 }
 
-void operation_st(uint16_t instruction, uint16_t registers[]){
+void operation_st(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-0
   0011   SR  PCoffset9
@@ -190,10 +190,10 @@ void operation_st(uint16_t instruction, uint16_t registers[]){
   uint16_t source_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
   uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
-  write_memory(memory_address, registers[source_register]);
+  write_memory(memory, memory_address, registers[source_register]);
 }
 
-void operation_sti(uint16_t instruction, uint16_t registers[]){
+void operation_sti(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-0
   1011   SR  PCoffset9
@@ -201,11 +201,11 @@ void operation_sti(uint16_t instruction, uint16_t registers[]){
   uint16_t source_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
   uint16_t memory_address_1 = registers[R_PC] + sign_extend(pc_offset_9, 9);
-  uint16_t memory_address_2 = read_memory(memory_address_1);
-  write_memory(memory_address_2, registers[source_register]);
+  uint16_t memory_address_2 = read_memory(memory, memory_address_1);
+  write_memory(memory, memory_address_2, registers[source_register]);
 }
 
-void operation_str(uint16_t instruction, uint16_t registers[]){
+void operation_str(uint16_t instruction, uint16_t registers[], uint16_t memory[]){
   /*
   15-12 11-9 8-6   5-0
   0111   SR  BaseR offset6
@@ -214,5 +214,5 @@ void operation_str(uint16_t instruction, uint16_t registers[]){
   uint16_t base_register = (instruction >> 6) & 0x7;
   uint16_t offset_6 = instruction & 0x3F;
   uint16_t memory_address = registers[base_register] + sign_extend(offset_6, 6);
-  write_memory(memory_address, registers[source_register]);
+  write_memory(memory, memory_address, registers[source_register]);
 }
