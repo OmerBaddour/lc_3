@@ -1,0 +1,166 @@
+; LABELS:
+; PROMPT_STRING
+; TEST_END_STR
+; TEST_CHAR
+; NEXT_CHAR
+; END
+
+; Initialization
+; entry
+3000
+
+; LEA R0,PROMPT_STRING
+E 000 ? ???? ????
+
+; TRAP 0x0022
+F022
+
+; TRAP 0x0023
+F023
+
+; AND R4,R0,R0
+5800
+
+; AND R0,R0,#0
+5020
+
+; ADD R0,R0,#10
+102A
+
+; TRAP 0x0021
+F021
+
+; LEA R6,SEARCH_STRING
+E 110 ? ???? ????
+
+; AND R5,R5,#0
+5B60
+
+; Test for end of string
+;;; LABEL TEST_END_STR
+; LDR R1,R6,#0
+6380
+
+; BRz END
+0 010 ? ???? ????
+
+; Test for character equalling search character
+;;; LABEL TEST_CHAR
+; NOT R1,R1
+927F
+
+; ADD R1,R1,#1
+1261
+
+; ADD R1,R4,R1
+1301
+
+; BRnp NEXT_CHAR
+0 101 ? ???? ????
+
+; ADD R5,R5,#1
+1B61
+
+;;; LABEL NEXT_CHAR
+; ADD R6,R6,#1
+1DA1
+
+; BRnzp TEST_END_STR
+0 111 ? ???? ????
+
+; End: print character counter value and halt
+;;; LABEL END
+; LEA R0,COUNT_STRING
+E 000 ? ???? ????
+
+; TRAP 0x0022
+F022
+
+; AND R0,R5,R5
+5145
+
+; LD R1,ASCII
+2 001 ? ???? ????
+
+; ADD R0,R0,R1
+1001
+
+; TRAP 0x0021
+F021
+
+; AND R0,R0,#0
+5020
+
+; AND R0,R0,#10
+102A
+
+; TRAP 0x0021
+F021
+
+; TRAP 0x0025
+F025
+
+; Data
+; PROMPT_STRING: "Enter character to search: "
+0045 ; E
+006E
+0074
+0065
+0072
+0020
+0063 ; c
+0068
+0061
+0072
+0061
+0063
+0074
+0065
+0072
+0020
+0074 ; t
+006F
+0020
+0073 ; s
+0065
+0061
+0072
+0063
+0068
+003A
+0020
+0000
+; SEARCH_STRING
+0048 ; H
+0065
+006C
+006C
+006F
+0020
+0077 ; w
+006F
+0072
+006C
+0064
+0000
+; COUNT_STRING
+0043
+0068
+0061
+0072
+0061
+0063
+0074
+0065
+0072
+0020
+0063
+006F
+0075
+006E
+0074
+003A
+0020
+0000
+; ASCII
+0030
