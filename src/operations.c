@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdint.h>
 #include "registers.h"
 #include "memory.h"
@@ -12,7 +13,8 @@ uint16_t sign_extend(uint16_t x, int bit_count) {
   return x;
 }
 
-void operation_add(uint16_t instruction, uint16_t registers[]){
+static void operation_add_execute(const uint16_t instruction, uint16_t registers[], uint16_t memory[]){
+  (void)memory;
   /*
   15-12 11-9 8-6 5 4-3 2-0
   0001   DR  SR1 0 00  SR2
@@ -38,6 +40,16 @@ void operation_add(uint16_t instruction, uint16_t registers[]){
   registers[destination_register] = registers[source_register_1] + other_value;
   update_register_condition_flags(registers, destination_register);
 }
+static uint16_t operation_add_assemble(const struct Operation *self, const char operands[]){
+  uint16_t code = self->code;
+  
+}
+const struct Operation OPERATION_ADD = {
+    .code = 1,
+    .name = "ADD",
+    .execute = operation_add_execute,
+    .assemble = operation_add_assemble,
+};
 
 void operation_and(uint16_t instruction, uint16_t registers[]){
   /*

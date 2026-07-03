@@ -1,10 +1,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include "util.h"
 #include "registers.h"
 #include "memory.h"
 #include "io.h"
+
+/*
+LC_3 helpers
+*/
 
 uint16_t swap16(uint16_t x){
   return (x << 8) | (x >> 8);
@@ -60,4 +66,58 @@ void handle_interrupt(int signal)
     restore_input_buffering();
     printf("\n");
     exit(-2);
+}
+
+/*
+StringList helpers
+*/
+
+/* trim slice [start, end) into new heap string */
+static char *trim_slice(const char *start, const char *end) {
+  while (start < end && isspace((unsigned char) start[0])) {
+    start++;
+  }
+  while (end > start && isspace((unsigned char) end[-1])) {
+    end--;
+  }
+  size_t length = (size_t)(end - start);
+  char *output = malloc(length + 1);
+  memcpy(output, start, length);
+  output[length] = '\0';
+  return output;
+}
+
+char *trim(const char *string) {
+  return trim_slice(string, string + strlen(string));
+}
+
+static void append(StringList *list, char *string) {
+  list->data = realloc(list->data, (size_t)(list->length + 1) * sizeof *list->data);
+  list->data[list->length] = string;
+  list->length++;
+}
+
+StringList *split(const char *string, char delimiter) {
+  StringList *list = calloc(1, sizeof(StringList));
+
+  char *start = (char *) string;
+  char *end = (char *) string;
+  for (;;end++) {
+    if (*end == delimiter || *end == '\0') {
+      append(list, trim_slice(start, end));
+      start = end + 1;
+      if (*end == '\0') {
+        break;
+      }
+    }
+  }
+  return list;
+}
+
+void free_string_list(StringList *list) {
+    for (uint16_t string_index = 0; string_index < list->length; string_index++) {
+      free(list->data[string_index]);
+    }
+    free(list->data);
+    free(list);
 }

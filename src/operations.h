@@ -3,6 +3,30 @@
 
 #include <stdint.h>
 
+typedef struct Operation {
+    const uint16_t code;
+    const char *name;
+    void (*execute)(const uint16_t instruction, uint16_t registers[], uint16_t memory[]);
+    uint16_t (*assemble)(const struct Operation *self, const char *operands);
+};
+
+extern const struct Operation OPERATION_BR;   /* branch */
+extern const struct Operation OPERATION_ADD;  /* add */
+extern const struct Operation OPERATION_LD;   /* load */
+extern const struct Operation OPERATION_ST;   /* store */
+extern const struct Operation OPERATION_JSR;  /* jump register */
+extern const struct Operation OPERATION_AND;  /* bitwise and */
+extern const struct Operation OPERATION_LDR;  /* load register */
+extern const struct Operation OPERATION_STR;  /* store register */
+extern const struct Operation OPERATION_RTI;  /* unused */
+extern const struct Operation OPERATION_NOT;  /* bitwise not */
+extern const struct Operation OPERATION_LDI;  /* load indirect */
+extern const struct Operation OPERATION_STI;  /* store indirect */
+extern const struct Operation OPERATION_JMP;  /* jump */
+extern const struct Operation OPERATION_RES;  /* reserved (unused) */
+extern const struct Operation OPERATION_LEA;  /* load effective address */
+extern const struct Operation OPERATION_TRAP;  /* execute trap */
+
 /* operation opcodes (bits 15-12 of an instruction) */
 enum {
   OP_BR = 0,  /* branch */

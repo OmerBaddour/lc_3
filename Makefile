@@ -15,7 +15,7 @@ TEST_BINS := $(TEST_SRCS:.c=)            # tests/test_registers.c -> tests/test_
 ALL_OBJS  := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o)
 DEPS      := $(ALL_OBJS:.o=.d)
 
-.PHONY: all test clean
+.PHONY: all test memcheck clean
 
 all: $(BIN)
 
@@ -34,6 +34,16 @@ tests/%: tests/%.o $(LIB_OBJS)
 # build every test, then run them in turn; stop on first failure
 test: $(TEST_BINS)
 	@for t in $(TEST_BINS); do echo "=== $$t ==="; ./$$t || exit 1; done
+
+# re-run the same test binaries under macOS 'leaks' to catch memory leaks;
+# leaks exits non-zero if any are found, so this fails the same way `test` does.
+# (Linux equivalent would wrap valgrind --leak-check=full here instead.)
+# Plain build only: `leaks` can't inspect ASan's replacement malloc.
+memcheck: $(TEST_BINS)
+	@for t in $(TEST_BINS); do \
+		echo "=== leaks: $$t ==="; \
+		leaks --atExit -- ./$$t || exit 1; \
+	done
 
 clean:
 	rm -rf $(BIN) $(ALL_OBJS) $(TEST_BINS) $(DEPS)
