@@ -9,12 +9,12 @@
  * ------------------------------------------------------------------ */
 
 /* Parse `n` source lines into a program array. Blank/comment lines are
-   dropped, so *count_out may be smaller than n. Caller frees via free_program. */
-static InstructionIntermediary **parse_program(const char *lines[], int n, int *count_out) {
-  InstructionIntermediary **program = malloc((size_t) n * sizeof *program);
+   dropped, so *count_out may be smaller than n. Caller frees via free_assembly_program. */
+static AssemblyInstruction **parse_assembly_program(const char *lines[], int n, int *count_out) {
+  AssemblyInstruction **program = malloc((size_t) n * sizeof *program);
   int count = 0;
   for (int i = 0; i < n; i++) {
-    InstructionIntermediary *line = parse_line(lines[i]);
+    AssemblyInstruction *line = parse_assembly_line(lines[i]);
     if (line != NULL) {
       program[count++] = line;
     }
@@ -23,9 +23,9 @@ static InstructionIntermediary **parse_program(const char *lines[], int n, int *
   return program;
 }
 
-static void free_program(InstructionIntermediary **program, int count) {
+static void free_assembly_program(AssemblyInstruction **program, int count) {
   for (int i = 0; i < count; i++) {
-    free_instruction_intermediary(program[i]);
+    free_assembly_instruction(program[i]);
   }
   free(program);
 }
@@ -35,102 +35,102 @@ static void free_program(InstructionIntermediary **program, int count) {
 static uint16_t assemble_one(const char *instruction) {
   const char *lines[] = { ".ORIG x3000", instruction, ".END" };
   int count = 0;
-  InstructionIntermediary **program = parse_program(lines, 3, &count);
+  AssemblyInstruction **program = parse_assembly_program(lines, 3, &count);
   uint16_t origin = 0;
   assert(assemble(program, count, &origin) == 1);
   assert(origin == 0x3000);
   assert(program[1]->machine_codes_length == 1);
   uint16_t word = program[1]->machine_codes[0];
-  free_program(program, count);
+  free_assembly_program(program, count);
   return word;
 }
 
 /* Assemble a whole program and assert it FAILS (returns 0). */
 static void assert_assemble_fails(const char *lines[], int n) {
   int count = 0;
-  InstructionIntermediary **program = parse_program(lines, n, &count);
+  AssemblyInstruction **program = parse_assembly_program(lines, n, &count);
   uint16_t origin = 0;
   assert(assemble(program, count, &origin) == 0);
-  free_program(program, count);
+  free_assembly_program(program, count);
 }
 
 /* ------------------------------------------------------------------ *
- * parse_line
+ * parse_assembly_line
  * ------------------------------------------------------------------ */
-static void test_parse_line(void) {
-  InstructionIntermediary *line;
+static void test_parse_assembly_line(void) {
+  AssemblyInstruction *line;
 
   /* blank and comment-only lines vanish */
-  assert(parse_line("") == NULL);
-  assert(parse_line("   \t  \n") == NULL);
-  assert(parse_line("; just a comment") == NULL);
+  assert(parse_assembly_line("") == NULL);
+  assert(parse_assembly_line("   \t  \n") == NULL);
+  assert(parse_assembly_line("; just a comment") == NULL);
 
   /* plain instruction: no label, three register operands */
-  line = parse_line("ADD R0, R1, R2");
+  line = parse_assembly_line("ADD R0, R1, R2");
   assert(line->label == NULL);
-  assert(strcmp(line->mnemonic, "ADD") == 0);
+  assert(strcmp(line->operation_name, "ADD") == 0);
   assert(line->operands_length == 3);
   assert(line->operands[0].type == OPERAND_REGISTER && line->operands[0].as.reg->code == 0);
   assert(line->operands[1].type == OPERAND_REGISTER && line->operands[1].as.reg->code == 1);
   assert(line->operands[2].type == OPERAND_REGISTER && line->operands[2].as.reg->code == 2);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
   /* label + negative immediate; trailing comment stripped */
-  line = parse_line("LOOP ADD R0, R0, #-5 ; count down");
+  line = parse_assembly_line("LOOP ADD R0, R0, #-5 ; count down");
   assert(strcmp(line->label, "LOOP") == 0);
-  assert(strcmp(line->mnemonic, "ADD") == 0);
+  assert(strcmp(line->operation_name, "ADD") == 0);
   assert(line->operands[2].type == OPERAND_INTEGER && line->operands[2].as.integer == -5);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
   /* case-insensitive mnemonics and registers; every immediate spelling */
-  line = parse_line("add r0, r1, x1F");
-  assert(strcmp(line->mnemonic, "add") == 0);   /* original casing kept */
+  line = parse_assembly_line("add r0, r1, x1F");
+  assert(strcmp(line->operation_name, "add") == 0);   /* original casing kept */
   assert(line->operands[0].type == OPERAND_REGISTER && line->operands[0].as.reg->code == 0);
   assert(line->operands[2].type == OPERAND_INTEGER && line->operands[2].as.integer == 31);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
-  line = parse_line("ADD R0, R0, 0x1F");
+  line = parse_assembly_line("ADD R0, R0, 0x1F");
   assert(line->operands[2].type == OPERAND_INTEGER && line->operands[2].as.integer == 31);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
-  line = parse_line("ADD R0, R0, 42");
+  line = parse_assembly_line("ADD R0, R0, 42");
   assert(line->operands[2].type == OPERAND_INTEGER && line->operands[2].as.integer == 42);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
   /* label operand (not a register, not a number) */
-  line = parse_line("BR LOOP");
+  line = parse_assembly_line("BR LOOP");
   assert(line->operands_length == 1);
   assert(line->operands[0].type == OPERAND_LABEL);
   assert(strcmp(line->operands[0].as.label, "LOOP") == 0);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
   /* BR condition-code suffixes are mnemonics ... */
-  line = parse_line("BRnzp SOMEWHERE");
+  line = parse_assembly_line("BRnzp SOMEWHERE");
   assert(line->label == NULL);
-  assert(strcmp(line->mnemonic, "BRnzp") == 0);
-  free_instruction_intermediary(line);
+  assert(strcmp(line->operation_name, "BRnzp") == 0);
+  free_assembly_instruction(line);
 
   /* ... but BR + other letters is a label starting a line */
-  line = parse_line("BRX ADD R0, R0, #1");
+  line = parse_assembly_line("BRX ADD R0, R0, #1");
   assert(strcmp(line->label, "BRX") == 0);
-  assert(strcmp(line->mnemonic, "ADD") == 0);
-  free_instruction_intermediary(line);
+  assert(strcmp(line->operation_name, "ADD") == 0);
+  free_assembly_instruction(line);
 
   /* .STRINGZ keeps spaces and commas inside the quotes as ONE operand */
-  line = parse_line("HELLO .STRINGZ \"Hello, World!\"");
+  line = parse_assembly_line("HELLO .STRINGZ \"Hello, World!\"");
   assert(strcmp(line->label, "HELLO") == 0);
   assert(line->operands_length == 1);
   assert(line->operands[0].type == OPERAND_STRING);
   assert(strcmp(line->operands[0].as.string, "Hello, World!") == 0);
-  free_instruction_intermediary(line);
+  free_assembly_instruction(line);
 
   /* a label sitting alone on its line */
-  line = parse_line("TARGET");
+  line = parse_assembly_line("TARGET");
   assert(strcmp(line->label, "TARGET") == 0);
-  assert(line->mnemonic == NULL);
-  free_instruction_intermediary(line);
+  assert(line->operation_name == NULL);
+  free_assembly_instruction(line);
 
-  printf("test_parse_line passed\n");
+  printf("test_parse_assembly_line passed\n");
 }
 
 /* ------------------------------------------------------------------ *
@@ -191,7 +191,7 @@ static void test_encode_pc_relative(void) {
     ".END",
   };
   int count = 0;
-  InstructionIntermediary **program = parse_program(lines, sizeof lines / sizeof lines[0], &count);
+  AssemblyInstruction **program = parse_assembly_program(lines, sizeof lines / sizeof lines[0], &count);
   uint16_t origin = 0;
   assert(assemble(program, count, &origin) == 1);
   assert(origin == 0x3000);
@@ -216,7 +216,7 @@ static void test_encode_pc_relative(void) {
   assert(program[10]->machine_codes[0] == ((0x4 << 12) | (1 << 11) | OFF11(loop, 0x3009)));  /* JSR back */
   assert(program[11]->machine_codes[0] == 0x1234);                                           /* .FILL */
 
-  free_program(program, count);
+  free_assembly_program(program, count);
 
   /* every BR condition-code suffix maps to its nzp bits */
   struct { const char *suffix; uint16_t nzp; } cc[] = {
@@ -249,7 +249,7 @@ static void test_directives_and_addressing(void) {
     ".END",
   };
   int count = 0;
-  InstructionIntermediary **program = parse_program(lines, sizeof lines / sizeof lines[0], &count);
+  AssemblyInstruction **program = parse_assembly_program(lines, sizeof lines / sizeof lines[0], &count);
   uint16_t origin = 0;
   assert(assemble(program, count, &origin) == 1);
 
@@ -281,7 +281,7 @@ static void test_directives_and_addressing(void) {
      0x3009 branches to itself -> offset -1 */
   assert(program[7]->machine_codes[0] == ((0x2 << 12) | (1 << 9) | 0x1FF));
 
-  free_program(program, count);
+  free_assembly_program(program, count);
   printf("test_directives_and_addressing passed\n");
 }
 
@@ -348,19 +348,19 @@ static void test_hello_world_object_file(void) {
   FILE *input = fopen("hello_world.asm", "r");
   assert(input != NULL);  /* run from the repo root (as `make test` does) */
 
-  InstructionIntermediary **program = NULL;
+  AssemblyInstruction **program = NULL;
   int count = 0, capacity = 0;
   char line[256];
   while (fgets(line, sizeof line, input)) {
-    InstructionIntermediary *intermediary = parse_line(line);
-    if (intermediary == NULL) {
+    AssemblyInstruction *instruction = parse_assembly_line(line);
+    if (instruction == NULL) {
       continue;
     }
     if (count == capacity) {
       capacity = capacity ? capacity * 2 : 16;
       program = realloc(program, (size_t) capacity * sizeof *program);
     }
-    program[count++] = intermediary;
+    program[count++] = instruction;
   }
   fclose(input);
 
@@ -369,7 +369,7 @@ static void test_hello_world_object_file(void) {
 
   const char *obj_path = "tests/test_assembler_tmp.obj";
   assert(write_object_file(obj_path, origin, program, count) == 1);
-  free_program(program, count);
+  free_assembly_program(program, count);
 
   /* the known-good object file, hand-assembled: origin, LEA, PUTS, HALT,
      then "Hello World!" one char per word, then the NUL word — big-endian. */
@@ -395,7 +395,7 @@ static void test_hello_world_object_file(void) {
 }
 
 int main(void) {
-  test_parse_line();
+  test_parse_assembly_line();
   test_encode_simple_instructions();
   test_encode_pc_relative();
   test_directives_and_addressing();

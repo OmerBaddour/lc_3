@@ -40,35 +40,35 @@ typedef struct Operand {
 */
 #define MAX_OPERANDS 3   /* the widest LC-3 instruction (e.g. ADD DR, SR1, SR2) */
 
-typedef struct InstructionIntermediary {
+typedef struct AssemblyInstruction {
   char *raw;                 /* original source line, OWNED — priceless for error messages */
   char *label;               /* label DEFINED on this line, or NULL. OWNED */
-  char *mnemonic;            /* "ADD", ".STRINGZ", ... OWNED. (Later: resolve to const Operation*) */
+  char *operation_name;      /* "ADD", ".STRINGZ", ... OWNED. (Later: resolve to const Operation*) */
   Operand operands[MAX_OPERANDS];
   int operands_length;
 
   uint16_t address;          /* set in pass 1 by the location counter (0 for now) */
   uint16_t *machine_codes;   /* set in pass 2; NULL until then. OWNED */
   int machine_codes_length;
-} InstructionIntermediary;
+} AssemblyInstruction;
 
 /* Parse one line of assembly. Returns NULL for blank / comment-only lines. */
-InstructionIntermediary *parse_line(const char *line);
+AssemblyInstruction *parse_assembly_line(const char *line);
 
-/* Free an InstructionIntermediary and everything it owns. */
-void free_instruction_intermediary(InstructionIntermediary *intermediary);
+/* Free an AssemblyInstruction and everything it owns. */
+void free_assembly_instruction(AssemblyInstruction *instruction);
 
 /* Debug: print the parsed form so we can watch pass 1 work. */
-void print_instruction_intermediary(const InstructionIntermediary *intermediary);
+void print_assembly_instruction(const AssemblyInstruction *instruction);
 
 /* Two passes over the whole program: pass 1 assigns addresses and builds the
    symbol table, pass 2 emits machine_codes on every line. Writes the origin
    to *origin_out. Returns 1 on success, 0 if any line failed to assemble. */
-int assemble(InstructionIntermediary **program, int count, uint16_t *origin_out);
+int assemble(AssemblyInstruction **program, int count, uint16_t *origin_out);
 
 /* Dump an assembled program: origin word (big-endian), then every line's
    machine_codes in order. Returns 1 on success, 0 if the file can't be opened. */
 int write_object_file(const char *path, uint16_t origin,
-                      InstructionIntermediary **program, int count);
+                      AssemblyInstruction **program, int count);
 
 #endif /* ASSEMBLER_H */

@@ -21,19 +21,19 @@ int main(int argc, char *argv[]) {
   }
 
   /* Collect every non-blank line into a growable array of intermediaries. */
-  InstructionIntermediary **program = NULL;
+  AssemblyInstruction **program = NULL;
   int count = 0, capacity = 0;
   char line[256];
   while (fgets(line, sizeof line, input)) {
-    InstructionIntermediary *intermediary = parse_line(line);
-    if (intermediary == NULL) {
+    AssemblyInstruction *instruction = parse_assembly_line(line);
+    if (instruction == NULL) {
       continue;  /* blank or comment-only line */
     }
     if (count == capacity) {
       capacity = capacity ? capacity * 2 : 16;
       program = realloc(program, (size_t) capacity * sizeof *program);
     }
-    program[count++] = intermediary;
+    program[count++] = instruction;
   }
   fclose(input);
 
@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
     /* A little assembler listing: address, mnemonic, and the emitted words. */
     printf("origin  0x%04X\n", origin);
     for (int i = 0; i < count; i++) {
-      InstructionIntermediary *l = program[i];
-      printf("0x%04X  %-10s", l->address, l->mnemonic ? l->mnemonic : "");
+      AssemblyInstruction *l = program[i];
+      printf("0x%04X  %-10s", l->address, l->operation_name ? l->operation_name : "");
       for (int j = 0; j < l->machine_codes_length; j++) {
         printf(" %04X", l->machine_codes[j]);
       }
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < count; i++) {
-    free_instruction_intermediary(program[i]);
+    free_assembly_instruction(program[i]);
   }
   free(program);
   return ok ? 0 : 1;
