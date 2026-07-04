@@ -5,11 +5,12 @@
 
 /* ---------------------------------------------------------------------------
  * PARKED: assembler-side IR + Operation-table experiment (mid-refactor).
- * Wrapped in `#if 0` (not a block comment) because the code below contains
- * its own /* ... *​/ comments, which would prematurely close a block comment.
- * `#if 0 ... #endif` is the idiomatic C way to disable a span that itself
- * contains comments. The VM doesn't need any of this — it dispatches via the
- * switch in lc_3.c over the free `operation_*` functions declared further down.
+ * Wrapped in `#if 0` rather than a block comment: the disabled code contains
+ * its own C comments, and a nested comment-open would prematurely close a
+ * surrounding block comment. `#if 0 ... #endif` is the idiomatic C way to
+ * disable a span that itself contains comments. The VM doesn't need any of
+ * this — it dispatches via the switch in lc_3.c over the free `operation_*`
+ * functions declared further down.
  * ------------------------------------------------------------------------- */
 #if 0
 

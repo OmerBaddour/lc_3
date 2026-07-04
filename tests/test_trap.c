@@ -5,18 +5,18 @@
 #include "trap.h"
 
 static void test_trap_getc(void) {
-  uint16_t registers_local[R_COUNT] = {0};
+  uint16_t registers_local[REGISTER_COUNT] = {0};
   char data[] = "A";
   FILE *mock_stdin = fmemopen(data, sizeof(data), "r");
   trap_getc(registers_local, mock_stdin);
-  assert(registers_local[R_R0] == 'A');
+  assert(registers_local[REGISTER_R0.code] == 'A');
   fclose(mock_stdin);
 }
 
 static void test_trap_out(void) {
-  uint16_t registers_local[R_COUNT] = {0};
+  uint16_t registers_local[REGISTER_COUNT] = {0};
   char buffer[2] = {0};
-  registers_local[R_R0] = 'A';
+  registers_local[REGISTER_R0.code] = 'A';
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
   trap_out(registers_local, mock_stdout);
   assert(buffer[0] == 'A');
@@ -31,8 +31,8 @@ static void test_trap_puts(void) {
     memory_local[i] = (uint16_t)expected[i];
   }
 
-  uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_R0] = 0; /* string starts at address 0 */
+  uint16_t registers_local[REGISTER_COUNT] = {0};
+  registers_local[REGISTER_R0.code] = 0; /* string starts at address 0 */
 
   char buffer[64] = {0};
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
@@ -45,14 +45,14 @@ static void test_trap_puts(void) {
 }
 
 static void test_trap_in(void) {
-  uint16_t registers_local[R_COUNT] = {0};
+  uint16_t registers_local[REGISTER_COUNT] = {0};
   char buffer_stdin[] = "A";
   FILE *mock_stdin = fmemopen(buffer_stdin, sizeof(buffer_stdin), "r");
   char buffer_stdout[64] = {0};
   FILE *mock_stdout = fmemopen(buffer_stdout, sizeof(buffer_stdout), "w");
   trap_in(registers_local, mock_stdin, mock_stdout);
   
-  assert(registers_local[R_R0] == (uint16_t)'A');
+  assert(registers_local[REGISTER_R0.code] == (uint16_t)'A');
   assert(strcmp(buffer_stdout, "Enter character: A") == 0);
 
   fclose(mock_stdin);
@@ -75,8 +75,8 @@ static void test_trap_putsp(void) {
     index_expected += 1;
   }
 
-  uint16_t registers_local[R_COUNT] = {0};
-  registers_local[R_R0] = 0; /* string starts at address 0 */
+  uint16_t registers_local[REGISTER_COUNT] = {0};
+  registers_local[REGISTER_R0.code] = 0; /* string starts at address 0 */
 
   char buffer[64] = {0};
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
