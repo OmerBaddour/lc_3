@@ -17,7 +17,7 @@ uint16_t swap16(uint16_t x){
 }
 
 uint16_t read_image_file(FILE* file) {
-  /* origin is where in memory to place file */
+  /* consume first instruction = origin = where in memory to place file */
   uint16_t origin;
   fread(&origin, sizeof(origin), 1, file);
   origin = swap16(origin);
@@ -35,6 +35,7 @@ uint16_t read_image_file(FILE* file) {
     exit(1);
   }
 
+  /* continue consuming from the file, to load the contents after origin into memory */
   /* use max file size to inform fread */
   uint16_t max_read = MEMORY_MAX - origin;
   uint16_t *p = memory + origin;

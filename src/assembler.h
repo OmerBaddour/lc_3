@@ -61,4 +61,14 @@ void free_instruction_intermediary(InstructionIntermediary *intermediary);
 /* Debug: print the parsed form so we can watch pass 1 work. */
 void print_instruction_intermediary(const InstructionIntermediary *intermediary);
 
+/* Two passes over the whole program: pass 1 assigns addresses and builds the
+   symbol table, pass 2 emits machine_codes on every line. Writes the origin
+   to *origin_out. Returns 1 on success, 0 if any line failed to assemble. */
+int assemble(InstructionIntermediary **program, int count, uint16_t *origin_out);
+
+/* Dump an assembled program: origin word (big-endian), then every line's
+   machine_codes in order. Returns 1 on success, 0 if the file can't be opened. */
+int write_object_file(const char *path, uint16_t origin,
+                      InstructionIntermediary **program, int count);
+
 #endif /* ASSEMBLER_H */

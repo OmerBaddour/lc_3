@@ -1,4 +1,3 @@
-assembler.o: assembler.c assembler.h src/registers.h src/util.h
-assembler.h:
+assembler.o: assembler.c src/assembler.h src/registers.h
+src/assembler.h:
 src/registers.h:
-src/util.h:

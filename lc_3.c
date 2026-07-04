@@ -14,7 +14,7 @@ int main(int argc, const char *argv[]) {
   /* load the single image argument */
   if (argc != 2) {
     /* show usage string */
-    printf("lc3 [image_file]\n");
+    printf("lc_3 [image_file]\n");
     exit(2);
   }
   /* execution begins at the image's origin; a valid origin is always

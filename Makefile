@@ -8,19 +8,16 @@ MAIN_SRC  := lc_3.c                      # the .c that holds main()
 LIB_SRCS  := $(wildcard src/*.c)         # everything compiled into the VM *and* tests
 TEST_SRCS := $(wildcard tests/*.c)       # one main() per file => one test binary each
 
-# the assembler is a second program (its own main()). It links only the subset
-# of src/ it actually needs — NOT operations.c, which is mid-refactor. Once
-# operations.c compiles again, fold encoding onto the Operation table and this
-# explicit list can collapse back to $(LIB_OBJS).
+# the assembler is a second program: a thin main() at the root, with all the
+# real logic in src/assembler.c (part of LIB_SRCS, so tests link it too).
 ASM_BIN      := assembler
 ASM_SRC      := assembler.c
-ASM_LIB_SRCS := src/util.c src/registers.c src/memory.c src/io.c
 
 # --- derived names ---
 MAIN_OBJ     := $(MAIN_SRC:.c=.o)
 LIB_OBJS     := $(LIB_SRCS:.c=.o)
 TEST_BINS    := $(TEST_SRCS:.c=)         # tests/test_registers.c -> tests/test_registers
-ASM_OBJS     := $(ASM_SRC:.c=.o) $(ASM_LIB_SRCS:.c=.o)
+ASM_OBJS     := $(ASM_SRC:.c=.o) $(LIB_OBJS)
 ALL_OBJS     := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o) $(ASM_SRC:.c=.o)
 DEPS         := $(ALL_OBJS:.o=.d)
 
