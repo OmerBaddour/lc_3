@@ -8,19 +8,32 @@ MAIN_SRC  := lc_3.c                      # the .c that holds main()
 LIB_SRCS  := $(wildcard src/*.c)         # everything compiled into the VM *and* tests
 TEST_SRCS := $(wildcard tests/*.c)       # one main() per file => one test binary each
 
-# --- derived names ---
-MAIN_OBJ  := $(MAIN_SRC:.c=.o)
-LIB_OBJS  := $(LIB_SRCS:.c=.o)
-TEST_BINS := $(TEST_SRCS:.c=)            # tests/test_registers.c -> tests/test_registers
-ALL_OBJS  := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o)
-DEPS      := $(ALL_OBJS:.o=.d)
+# the assembler is a second program (its own main()). It links only the subset
+# of src/ it actually needs — NOT operations.c, which is mid-refactor. Once
+# operations.c compiles again, fold encoding onto the Operation table and this
+# explicit list can collapse back to $(LIB_OBJS).
+ASM_BIN      := assembler
+ASM_SRC      := assembler.c
+ASM_LIB_SRCS := src/util.c src/registers.c src/memory.c src/io.c
 
-.PHONY: all test memcheck clean
+# --- derived names ---
+MAIN_OBJ     := $(MAIN_SRC:.c=.o)
+LIB_OBJS     := $(LIB_SRCS:.c=.o)
+TEST_BINS    := $(TEST_SRCS:.c=)         # tests/test_registers.c -> tests/test_registers
+ASM_OBJS     := $(ASM_SRC:.c=.o) $(ASM_LIB_SRCS:.c=.o)
+ALL_OBJS     := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o) $(ASM_SRC:.c=.o)
+DEPS         := $(ALL_OBJS:.o=.d)
+
+.PHONY: all assembler test memcheck clean
 
 all: $(BIN)
 
 # link the VM: main + every lib object
 $(BIN): $(MAIN_OBJ) $(LIB_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+# link the assembler: its main + the libs it needs
+$(ASM_BIN): $(ASM_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 # compile any .c -> .o (one rule covers src/, tests/, and lc_3.c)
@@ -46,7 +59,7 @@ memcheck: $(TEST_BINS)
 	done
 
 clean:
-	rm -rf $(BIN) $(ALL_OBJS) $(TEST_BINS) $(DEPS)
+	rm -rf $(BIN) $(ASM_BIN) $(ALL_OBJS) $(TEST_BINS) $(DEPS)
 
 # pull in the auto-generated header dependencies (ignored if absent, e.g. first build)
 -include $(DEPS)

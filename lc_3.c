@@ -14,7 +14,7 @@ int main(int argc, const char *argv[]) {
   /* load the single image argument */
   if (argc != 2) {
     /* show usage string */
-    printf("lc3 [image-file]\n");
+    printf("lc3 [image_file]\n");
     exit(2);
   }
   /* execution begins at the image's origin; a valid origin is always
@@ -28,18 +28,19 @@ int main(int argc, const char *argv[]) {
   /* setup */
   signal(SIGINT, handle_interrupt);
   disable_input_buffering();
+  uint16_t registers[REGISTER_COUNT] = {0};
 
   /* exactly one condition flag should be set at all times */
   /* set zero condition flag arbitrarily */
-  registers[R_COND] = FL_ZRO;
+  registers[REGISTER_PROCESSOR_STATUS.code] = CONDITION_FLAG_ZERO;
 
   /* set program counter to where the image was actually loaded */
-  registers[R_PC] = origin;
+  registers[REGISTER_PROGRAM_COUNTER.code] = origin;
 
   int running = 1;
   while (running) {
     /* FETCH */
-    uint16_t instruction = read_memory(memory, registers[R_PC]++);
+    uint16_t instruction = read_memory(memory, registers[REGISTER_PROGRAM_COUNTER.code]++);
     uint16_t operation = instruction >> 12;
 
     switch (operation) {
@@ -100,7 +101,7 @@ int main(int argc, const char *argv[]) {
         15-12 11-8 8-0
         1111  0000 trapvect8
         */
-        registers[R_R7] = registers[R_PC];
+        registers[REGISTER_R7.code] = registers[REGISTER_PROGRAM_COUNTER.code];
         uint16_t trapvect_8 = instruction & 0xFF;
 
         switch (trapvect_8) {

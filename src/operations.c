@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include "registers.h"
 #include "memory.h"
 #include "operations.h"
+#include "util.h"
 
 uint16_t sign_extend(uint16_t x, int bit_count) {
   /* sign extend x with bit_count to 16 bits, respecting negatives */
@@ -13,8 +15,7 @@ uint16_t sign_extend(uint16_t x, int bit_count) {
   return x;
 }
 
-static void operation_add_execute(const uint16_t instruction, uint16_t registers[], uint16_t memory[]){
-  (void)memory;
+void operation_add(uint16_t instruction, uint16_t registers[]){
   /*
   15-12 11-9 8-6 5 4-3 2-0
   0001   DR  SR1 0 00  SR2
@@ -40,16 +41,38 @@ static void operation_add_execute(const uint16_t instruction, uint16_t registers
   registers[destination_register] = registers[source_register_1] + other_value;
   update_register_condition_flags(registers, destination_register);
 }
-static uint16_t operation_add_assemble(const struct Operation *self, const char operands[]){
+
+/* ---------------------------------------------------------------------------
+ * PARKED: assembler-side encoding experiment (mid-refactor, incomplete).
+ * Disabled with `#if 0` so the VM builds. This is where per-opcode `assemble`
+ * belongs once operations.h's Operation table comes back — the mirror of
+ * `execute`. Kept verbatim as a starting point rather than deleted.
+ * ------------------------------------------------------------------------- */
+#if 0
+static InstructionIntermediary *operation_add_assemble_raw(const Operation *self, const char operands[]){
   uint16_t code = self->code;
-  
+  StringList *operands_parsed = split(operands, ',');
+  assert(operands_parsed->length == 3);
+
+  char *destination_register_name = operands_parsed->data[0];
+  Register *destination_register = register_by_name(destination_register_name);
+  assert(destination_register != NULL);
+
+  char *source_register_1_name = operands_parsed->data[1];
+  Register *source_register_1 = register_by_name(source_register_1);
+  assert(source_register_1 != NULL);
+
+
+
 }
-const struct Operation OPERATION_ADD = {
+const Operation OPERATION_ADD = {
     .code = 1,
     .name = "ADD",
     .execute = operation_add_execute,
-    .assemble = operation_add_assemble,
+    .assemble_raw = operation_add_assemble_raw,
+    .assemble_symbol_table = operation_add_assemble_symbol_table,
 };
+#endif /* PARKED assembler-side encoding experiment */
 
 void operation_and(uint16_t instruction, uint16_t registers[]){
   /*
@@ -100,11 +123,11 @@ void operation_br(uint16_t instruction, uint16_t registers[]){
   uint16_t p = (instruction >> 9) & 0x1;
   uint16_t pc_offset_9 = instruction & 0x1FF;
   if (
-    (n & (registers[R_COND] == FL_NEG))
-    | (z & (registers[R_COND] == FL_ZRO))
-    | (p & (registers[R_COND] == FL_POS))
+    (n & (registers[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_NEGATIVE))
+    | (z & (registers[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_ZERO))
+    | (p & (registers[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE))
   ) {
-    registers[R_PC] += sign_extend(pc_offset_9, 9);
+    registers[REGISTER_PROGRAM_COUNTER.code] += sign_extend(pc_offset_9, 9);
   }
 }
 
@@ -115,7 +138,7 @@ void operation_jmp(uint16_t instruction, uint16_t registers[]){
   */
   /* NOTE: also handles OP_RET since this is where `BaseR = 111` */
   uint16_t base_register = (instruction >> 6) & 0x7;
-  registers[R_PC] = registers[base_register];
+  registers[REGISTER_PROGRAM_COUNTER.code] = registers[base_register];
 }
 
 void operation_jsr(uint16_t instruction, uint16_t registers[]){
@@ -128,16 +151,16 @@ void operation_jsr(uint16_t instruction, uint16_t registers[]){
   15-12 11 10-9 8-6   5-0
   0100  0  00   BaseR 00000
   */
-  registers[R_R7] = registers[R_PC];
+  registers[REGISTER_R7.code] = registers[REGISTER_PROGRAM_COUNTER.code];
   uint16_t is_offset_mode = (instruction >> 11) & 0x1;
   if (is_offset_mode) {
     /* pc_offset_11 */
     uint16_t pc_offset_11 = instruction & 0x7FF;
-    registers[R_PC] += sign_extend(pc_offset_11, 11);
+    registers[REGISTER_PROGRAM_COUNTER.code] += sign_extend(pc_offset_11, 11);
   } else {
     /* base_register */
     uint16_t base_register = (instruction >> 6) & 0x7;
-    registers[R_PC] = registers[base_register];
+    registers[REGISTER_PROGRAM_COUNTER.code] = registers[base_register];
   }
 }
 
@@ -148,7 +171,7 @@ void operation_lea(uint16_t instruction, uint16_t registers[]){
   */
   uint16_t destination_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
-  uint16_t effective_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
+  uint16_t effective_address = registers[REGISTER_PROGRAM_COUNTER.code] + sign_extend(pc_offset_9, 9);
   registers[destination_register] = effective_address;
   update_register_condition_flags(registers, destination_register);
 }
@@ -160,7 +183,7 @@ void operation_ld(uint16_t instruction, uint16_t registers[], uint16_t memory[])
   */
   uint16_t destination_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
-  uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
+  uint16_t memory_address = registers[REGISTER_PROGRAM_COUNTER.code] + sign_extend(pc_offset_9, 9);
   uint16_t memory_value = read_memory(memory, memory_address);
   registers[destination_register] = memory_value;
   update_register_condition_flags(registers, destination_register);
@@ -173,7 +196,7 @@ void operation_ldi(uint16_t instruction, uint16_t registers[], uint16_t memory[]
   */
   uint16_t destination_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
-  uint16_t memory_address_1 = registers[R_PC] + sign_extend(pc_offset_9, 9);
+  uint16_t memory_address_1 = registers[REGISTER_PROGRAM_COUNTER.code] + sign_extend(pc_offset_9, 9);
   uint16_t memory_address_2 = read_memory(memory, memory_address_1);
   uint16_t memory_value = read_memory(memory, memory_address_2);
   registers[destination_register] = memory_value;
@@ -201,7 +224,7 @@ void operation_st(uint16_t instruction, uint16_t registers[], uint16_t memory[])
   */
   uint16_t source_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
-  uint16_t memory_address = registers[R_PC] + sign_extend(pc_offset_9, 9);
+  uint16_t memory_address = registers[REGISTER_PROGRAM_COUNTER.code] + sign_extend(pc_offset_9, 9);
   write_memory(memory, memory_address, registers[source_register]);
 }
 
@@ -212,7 +235,7 @@ void operation_sti(uint16_t instruction, uint16_t registers[], uint16_t memory[]
   */
   uint16_t source_register = (instruction >> 9) & 0x7;
   uint16_t pc_offset_9 = instruction & 0x1FF;
-  uint16_t memory_address_1 = registers[R_PC] + sign_extend(pc_offset_9, 9);
+  uint16_t memory_address_1 = registers[REGISTER_PROGRAM_COUNTER.code] + sign_extend(pc_offset_9, 9);
   uint16_t memory_address_2 = read_memory(memory, memory_address_1);
   write_memory(memory, memory_address_2, registers[source_register]);
 }

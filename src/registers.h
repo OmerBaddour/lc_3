@@ -3,35 +3,35 @@
 
 #include <stdint.h>
 
-/* registers */
-enum {
-  /* general purpose registers */
-  R_R0 = 0,
-  R_R1,
-  R_R2,
-  R_R3,
-  R_R4,
-  R_R5,
-  R_R6,
-  R_R7,
+#define REGISTER_COUNT 10
 
-  R_PC,     /* program counter */
-  R_COND,   /* condition flags */
-  R_COUNT   /* sentinel element, trick to get register count */
-};
+typedef struct Register {
+    const uint16_t code;
+    const char *name;
+} Register;
+
+extern const Register REGISTER_R0;
+extern const Register REGISTER_R1;
+extern const Register REGISTER_R2;
+extern const Register REGISTER_R3;
+extern const Register REGISTER_R4;
+extern const Register REGISTER_R5;
+extern const Register REGISTER_R6;
+extern const Register REGISTER_R7;
+extern const Register REGISTER_PROGRAM_COUNTER;
+extern const Register REGISTER_PROCESSOR_STATUS;
+
+extern const Register *const REGISTERS[REGISTER_COUNT];
+
+const Register *register_by_code(uint16_t code);
+const Register *register_by_name(const char *name);
 
 /* condition flags */
 enum {
-  FL_POS = 1 << 0,  /* positive */
-  FL_ZRO = 1 << 1,  /* zero */
-  FL_NEG = 1 << 2,  /* negative */
+  CONDITION_FLAG_POSITIVE = 1 << 0,
+  CONDITION_FLAG_ZERO     = 1 << 1,
+  CONDITION_FLAG_NEGATIVE = 1 << 2,
 };
-
-/* address the program counter starts at by convention */
-enum { USER_SPACE_START = 0x3000 };
-
-/* registers: declared here, defined once in registers.c */
-extern uint16_t registers[R_COUNT];
 
 void update_register_condition_flags(
     uint16_t registers[],

@@ -27,13 +27,13 @@ static void test_operation_add(void) {
   // uint16_t instruction = (0x1 << 12) | (R_R0 << 9) | (R_R1 << 6) | (0 << 5) | R_R2;
   // operation_add(instruction, registers_local);
   // assert(registers_local[R_R0] == 12);
-  // assert(registers_local[R_COND] == FL_POS);
+  // assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 
   // /* ADD R0, R1, #-1 (immediate mode) */
   // instruction = encode_imm(0x1, R_R0, R_R1, 0x1F); /* imm5 = -1 */
   // operation_add(instruction, registers_local);
   // assert(registers_local[R_R0] == 4);
-  // assert(registers_local[R_COND] == FL_POS);
+  // assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 }
 
 static void test_operation_and(void) {
@@ -43,14 +43,14 @@ static void test_operation_and(void) {
   uint16_t instruction = encode_imm(0x5, R_R0, R_R1, 0x0F);
   operation_and(instruction, registers_local);
   assert(registers_local[R_R0] == 0x000F);
-  assert(registers_local[R_COND] == FL_POS);
+  assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 
   /* AND that yields zero sets the zero flag */
   registers_local[R_R1] = 0x00F0;
   instruction = encode_imm(0x5, R_R0, R_R1, 0x0F);
   operation_and(instruction, registers_local);
   assert(registers_local[R_R0] == 0);
-  assert(registers_local[R_COND] == FL_ZRO);
+  assert(registers_local[R_COND] == CONDITION_FLAG_ZERO);
 }
 
 static void test_operation_not(void) {
@@ -60,13 +60,13 @@ static void test_operation_not(void) {
   uint16_t instruction = (0x9 << 12) | (R_R0 << 9) | (R_R1 << 6) | 0x3F;
   operation_not(instruction, registers_local);
   assert(registers_local[R_R0] == 0xFFFF);
-  assert(registers_local[R_COND] == FL_NEG);
+  assert(registers_local[R_COND] == CONDITION_FLAG_NEGATIVE);
 }
 
 static void test_operation_br(void) {
   uint16_t registers_local[R_COUNT] = {0};
   registers_local[R_PC] = 0x3000;
-  registers_local[R_COND] = FL_ZRO;
+  registers_local[R_COND] = CONDITION_FLAG_ZERO;
   /* BRz #5: taken because COND == ZRO */
   uint16_t instruction = (0x0 << 12) | (0 << 11) | (1 << 10) | (0 << 9) | 0x005;
   operation_br(instruction, registers_local);
@@ -113,7 +113,7 @@ static void test_operation_lea(void) {
   uint16_t instruction = (0xE << 12) | (R_R0 << 9) | 0x004;
   operation_lea(instruction, registers_local);
   assert(registers_local[R_R0] == 0x3004);
-  assert(registers_local[R_COND] == FL_POS);
+  assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 }
 
 static void test_operation_ld(void) {
@@ -125,7 +125,7 @@ static void test_operation_ld(void) {
   uint16_t instruction = (0x2 << 12) | (R_R0 << 9) | 0x004;
   operation_ld(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0xABCD);
-  assert(registers_local[R_COND] == FL_NEG); /* high bit set */
+  assert(registers_local[R_COND] == CONDITION_FLAG_NEGATIVE); /* high bit set */
 }
 
 static void test_operation_ldi(void) {
@@ -138,7 +138,7 @@ static void test_operation_ldi(void) {
   uint16_t instruction = (0xA << 12) | (R_R0 << 9) | 0x004;
   operation_ldi(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0x0042);
-  assert(registers_local[R_COND] == FL_POS);
+  assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 }
 
 static void test_operation_ldr(void) {
@@ -150,7 +150,7 @@ static void test_operation_ldr(void) {
   uint16_t instruction = (0x6 << 12) | (R_R0 << 9) | (R_R1 << 6) | 0x03;
   operation_ldr(instruction, registers_local, memory_local);
   assert(registers_local[R_R0] == 0x0007);
-  assert(registers_local[R_COND] == FL_POS);
+  assert(registers_local[R_COND] == CONDITION_FLAG_POSITIVE);
 }
 
 static void test_operation_st(void) {
