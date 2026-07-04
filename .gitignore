@@ -7,3 +7,4 @@ lc_3
 # compiled test binaries (extensionless); keep the .c sources (.o/.d stay ignored via *.o etc.)
 tests/test_*
 !tests/test_*.c
+assembler
