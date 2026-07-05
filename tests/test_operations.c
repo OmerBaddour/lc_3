@@ -38,20 +38,26 @@ static void test_sign_extend(void) {
 }
 
 static void test_operation_add(void) {
-  // uint16_t registers_local[REGISTER_COUNT] = {0};
-  // registers_local[REGISTER_R1.code] = 5;
-  // /* ADD R0, R1, R2 (register mode): op=0001 dr=000 sr1=001 0 00 sr2=010 */
-  // registers_local[REGISTER_R2.code] = 7;
-  // uint16_t instruction = (0x1 << 12) | (REGISTER_R0.code << 9) | (REGISTER_R1.code << 6) | (0 << 5) | REGISTER_R2.code;
-  // operation_add(instruction, registers_local, NULL);
-  // assert(registers_local[REGISTER_R0.code] == 12);
-  // assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
+  uint16_t registers_local[REGISTER_COUNT] = {0};
+  registers_local[REGISTER_R1.code] = 5;
+  registers_local[REGISTER_R2.code] = 7;
+  /* ADD R0, R1, R2 (register mode): op=0001 dr=000 sr1=001 0 00 sr2=010 */
+  uint16_t instruction = (0x1 << 12) | (REGISTER_R0.code << 9) | (REGISTER_R1.code << 6) | (0 << 5) | REGISTER_R2.code;
+  operation_add(instruction, registers_local, NULL);
+  assert(registers_local[REGISTER_R0.code] == 12);
+  assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
 
-  // /* ADD R0, R1, #-1 (immediate mode) */
-  // instruction = encode_imm(0x1, REGISTER_R0.code, REGISTER_R1.code, 0x1F); /* imm5 = -1 */
-  // operation_add(instruction, registers_local, NULL);
-  // assert(registers_local[REGISTER_R0.code] == 4);
-  // assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
+  /* ADD R0, R1, #-1 (immediate mode) -> 5 + (-1) = 4 */
+  instruction = encode_imm(0x1, REGISTER_R0.code, REGISTER_R1.code, 0x1F); /* imm5 = -1 */
+  operation_add(instruction, registers_local, NULL);
+  assert(registers_local[REGISTER_R0.code] == 4);
+  assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
+
+  /* ADD that yields zero sets the zero flag: 5 + (-5) = 0 */
+  instruction = encode_imm(0x1, REGISTER_R0.code, REGISTER_R1.code, 0x1B); /* imm5 = -5 */
+  operation_add(instruction, registers_local, NULL);
+  assert(registers_local[REGISTER_R0.code] == 0);
+  assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_ZERO);
 }
 
 static void test_operation_and(void) {

@@ -43,11 +43,12 @@ typedef struct Operand {
 typedef struct AssemblyInstruction {
   char *raw;                 /* original source line, OWNED — priceless for error messages */
   char *label;               /* label DEFINED on this line, or NULL. OWNED */
-  char *operation_name;      /* "ADD", ".STRINGZ", ... OWNED. (Later: resolve to const Operation*) */
+  char *operation_name;      /* "ADD", ".STRINGZ", ... OWNED. Resolved per pass via the
+                                assembler-operation / trap / directive tables. */
   Operand operands[MAX_OPERANDS];
   int operands_length;
 
-  uint16_t address;          /* set in pass 1 by the location counter (0 for now) */
+  uint16_t address;          /* set in pass 1 by the location counter */
   uint16_t *machine_codes;   /* set in pass 2; NULL until then. OWNED */
   int machine_codes_length;
 } AssemblyInstruction;

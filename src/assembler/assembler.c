@@ -48,6 +48,22 @@ static int is_operation_name(const char *token) {
   return found;
 }
 
+/* Find the comment marker — the first ';' that is NOT inside a double-quoted
+   string — so a semicolon in a .STRINGZ literal ("a;b") survives. Returns a
+   pointer into `s`, or NULL if the line carries no comment. LC-3 string literals
+   have no escape sequences, so a plain in/out-of-quotes toggle is exact. */
+static char *find_comment(char *s) {
+  int in_string = 0;
+  for (; *s != '\0'; s++) {
+    if (*s == '"') {
+      in_string = !in_string;
+    } else if (*s == ';' && !in_string) {
+      return s;
+    }
+  }
+  return NULL;
+}
+
 /* ------------------------------------------------------------------ *
  * classify a single operand token into a tagged-union Operand
  *
@@ -113,9 +129,10 @@ AssemblyInstruction *parse_assembly_line(const char *line) {
   /* Keep the original for error messages before we chop it up. */
   char *raw = strdup(line);
 
-  /* (a) strip the comment: everything from ';' to end of line. */
+  /* (a) strip the comment: everything from ';' to end of line — but only a ';'
+         outside a string literal, so `.STRINGZ "a;b"` keeps its semicolon. */
   char *no_comment = strdup(line);
-  char *semicolon = strchr(no_comment, ';');
+  char *semicolon = find_comment(no_comment);
   if (semicolon != NULL) {
     *semicolon = '\0';
   }
@@ -274,7 +291,7 @@ static uint16_t assembly_instruction_ordinary_to_bits(const AssemblyInstruction 
 
   const Trap *trap = trap_by_name(upper);
   if (trap != NULL) {
-    return (uint16_t) ((0xF << 12) | trap->code);
+    return (uint16_t) ((OPERATION_TRAP.code << 12) | trap->code);
   }
 
   fprintf(stderr, "error: unknown operation name '%s'\n", line->operation_name);
@@ -324,6 +341,13 @@ int assemble(AssemblyInstruction **program, int count, uint16_t *origin_out) {
       continue;
     }
 
+    /* .END ends the program: nothing past it is laid out, symbol-mapped, or
+       emitted (a label defined after .END is therefore correctly "undefined"). */
+    if (upper && directive_by_name(upper) == &DIRECTIVE_END) {
+      free(upper);
+      break;
+    }
+
     line->address = lc;
     if (line->label) {
       symbol_table_insert(&table, line->label, lc);
@@ -343,6 +367,10 @@ int assemble(AssemblyInstruction **program, int count, uint16_t *origin_out) {
   for (int i = 0; i < count; i++) {
     AssemblyInstruction *line = program[i];
     char *upper = line->operation_name ? to_upper_copy(line->operation_name) : NULL;
+    if (upper && directive_by_name(upper) == &DIRECTIVE_END) {
+      free(upper);
+      break;  /* stop emitting at .END, mirroring pass 1 */
+    }
     if (!assembly_instruction_compute_machine_codes(line, upper, &table)) {
       ok = 0;
     }

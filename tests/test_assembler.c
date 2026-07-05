@@ -125,6 +125,13 @@ static void test_parse_assembly_line(void) {
   assert(strcmp(line->operands[0].as.string, "Hello, World!") == 0);
   free_assembly_instruction(line);
 
+  /* a ';' INSIDE a .STRINGZ literal is data, not the start of a comment */
+  line = parse_assembly_line("MSG .STRINGZ \"a;b\" ; real comment");
+  assert(line->operands_length == 1);
+  assert(line->operands[0].type == OPERAND_STRING);
+  assert(strcmp(line->operands[0].as.string, "a;b") == 0);
+  free_assembly_instruction(line);
+
   /* a label sitting alone on its line */
   line = parse_assembly_line("TARGET");
   assert(strcmp(line->label, "TARGET") == 0);
@@ -343,6 +350,29 @@ static void test_errors(void) {
 }
 
 /* ------------------------------------------------------------------ *
+ * .END terminates assembly: nothing after it is laid out or emitted
+ * ------------------------------------------------------------------ */
+static void test_end_terminates_assembly(void) {
+  /* the line after .END has an out-of-range immediate that would fail to
+     assemble — so a clean assembly proves that line was never reached. */
+  const char *lines[] = {
+    ".ORIG x3000",
+    "ADD R0, R0, #0",
+    ".END",
+    "ADD R0, R0, #99",   /* imm5 out of range: only assembled if .END is ignored */
+  };
+  int count = 0;
+  AssemblyInstruction **program = parse_assembly_program(lines, 4, &count);
+  uint16_t origin = 0;
+  assert(assemble(program, count, &origin) == 1);
+  /* the post-.END line emitted nothing */
+  assert(program[3]->machine_codes_length == 0);
+  free_assembly_program(program, count);
+
+  printf("test_end_terminates_assembly passed\n");
+}
+
+/* ------------------------------------------------------------------ *
  * end to end: hello world source -> exact object-file bytes
  * ------------------------------------------------------------------ */
 static void test_hello_world_object_file(void) {
@@ -436,6 +466,7 @@ int main(void) {
   test_encode_pc_relative();
   test_directives_and_addressing();
   test_errors();
+  test_end_terminates_assembly();
   test_hello_world_object_file();
   printf("test_assembler passed\n");
   return 0;
