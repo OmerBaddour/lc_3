@@ -1,5 +1,5 @@
 #include <string.h>
-#include "registers.h"
+#include "core/registers.h"
 
 const Register REGISTER_R0               = { .code = 0,   .name = "R0" };
 const Register REGISTER_R1               = { .code = 1,   .name = "R1" };

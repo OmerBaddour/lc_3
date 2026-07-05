@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
-#include "memory.h"
-#include "registers.h"
-#include "io.h"
+#include "core/memory.h"
+#include "core/registers.h"
+#include "virtual_machine/io.h"
 
 /* the one real definition of the memory file */
 uint16_t memory[MEMORY_MAX];  /* 2^16 = 65536 locations */

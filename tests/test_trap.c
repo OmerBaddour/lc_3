@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "registers.h"
-#include "trap.h"
+#include "core/registers.h"
+#include "virtual_machine/trap.h"
 
 static void test_trap_getc(void) {
   uint16_t registers_local[REGISTER_COUNT] = {0};

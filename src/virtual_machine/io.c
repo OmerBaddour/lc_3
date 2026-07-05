@@ -8,7 +8,7 @@
 #include <sys/termios.h>
 #include <sys/mman.h>
 /* END macOS specific stuff for reading from keyboard */
-#include "io.h"
+#include "virtual_machine/io.h"
 
 struct termios original_tio;
 

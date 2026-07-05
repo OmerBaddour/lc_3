@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "registers.h"
-#include "trap.h"
+#include "core/registers.h"
+#include "virtual_machine/trap.h"
 
 void trap_getc(uint16_t registers[], FILE *file) {
   int character = getc(file);

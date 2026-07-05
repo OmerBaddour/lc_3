@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "assembler.h"
+#include "assembler/assembler.h"
+#include "assembler/operation.h"
 
 /* ------------------------------------------------------------------ *
  * helpers: build a program from source lines, assemble it, tear it down
@@ -394,7 +395,34 @@ static void test_hello_world_object_file(void) {
   printf("test_hello_world_object_file passed\n");
 }
 
+/* ------------------------------------------------------------------ *
+ * assembly_operation_by_name: mnemonic families map to their base op
+ * ------------------------------------------------------------------ */
+static void test_assembly_operation_by_name(void) {
+  /* exact canonical names */
+  assert(assembly_operation_by_name("ADD")->operation == &OPERATION_ADD);
+  assert(assembly_operation_by_name("TRAP")->operation == &OPERATION_TRAP);
+
+  /* families the VM never sees fold onto their base opcode. NOTE the argument
+     is already upper-cased by the contract (the assembler upper-cases first). */
+  assert(assembly_operation_by_name("BR")->operation    == &OPERATION_BR);
+  assert(assembly_operation_by_name("BRNZP")->operation == &OPERATION_BR);
+  assert(assembly_operation_by_name("BRZ")->operation   == &OPERATION_BR);
+  assert(assembly_operation_by_name("RET")->operation   == &OPERATION_JMP);
+  assert(assembly_operation_by_name("JSRR")->operation  == &OPERATION_JSR);
+
+  /* non-operations: labels, trap aliases, directives, RES */
+  assert(assembly_operation_by_name("BRX") == NULL);   /* B,R then a non-cc letter -> label */
+  assert(assembly_operation_by_name("LOOP") == NULL);
+  assert(assembly_operation_by_name("GETC") == NULL);  /* trap alias, not an operation */
+  assert(assembly_operation_by_name(".FILL") == NULL);
+  assert(assembly_operation_by_name("RES") == NULL);
+
+  printf("test_assembly_operation_by_name passed\n");
+}
+
 int main(void) {
+  test_assembly_operation_by_name();
   test_parse_assembly_line();
   test_encode_simple_instructions();
   test_encode_pc_relative();

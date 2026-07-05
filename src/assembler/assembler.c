@@ -3,9 +3,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "assembler.h"
-#include "util.h"       /* split(), trim(), free_string_list() — reused from the VM side */
-#include "registers.h"  /* register_by_name() */
+#include "assembler/assembler.h"
+#include "assembler/operation.h"     /* assembly_operation_by_name(), the encode table */
+#include "assembler/symbol_table.h"  /* SymbolTable + symbol_table_* */
+#include "core/util.h"       /* split(), trim(), free_string_list() — reused from the VM side */
+#include "core/registers.h"  /* register_by_name() */
 
 /* ------------------------------------------------------------------ *
  * small string helpers
@@ -31,13 +33,11 @@ static char *to_upper_copy(const char *s) {
  * start with an optional label, so the only way to tell `LOOP` from `ADD`
  * is to know the set of real operation names.
  *
- * NOTE: this hard-coded table is a placeholder. Once the Operation table
- * exists it becomes `operation_by_name(...) != NULL` plus a directive
- * check — one source of truth instead of this list.
+ * Opcodes (incl. the BR/RET/JSRR families) now come from the Operation table
+ * via assembly_operation_by_name. Trap aliases and directives are still listed
+ * here until their own tables land (M2/M3).
  * ------------------------------------------------------------------ */
-static const char *OPERATION_NAMES[] = {
-  "ADD", "AND", "NOT", "LD", "LDI", "LDR", "LEA",
-  "ST", "STI", "STR", "JMP", "JSR", "JSRR", "RET", "RTI", "TRAP",
+static const char *NON_OPERATION_NAMES[] = {
   /* trap aliases */
   "GETC", "OUT", "PUTS", "IN", "PUTSP", "HALT",
   /* assembler directives */
@@ -46,23 +46,11 @@ static const char *OPERATION_NAMES[] = {
 
 static int is_operation_name(const char *token) {
   char *upper = to_upper_copy(token);
-  int found = 0;
+  int found = (assembly_operation_by_name(upper) != NULL);
 
-  for (size_t i = 0; i < sizeof OPERATION_NAMES / sizeof OPERATION_NAMES[0]; i++) {
-    if (strcmp(upper, OPERATION_NAMES[i]) == 0) {
+  for (size_t i = 0; !found && i < sizeof NON_OPERATION_NAMES / sizeof NON_OPERATION_NAMES[0]; i++) {
+    if (strcmp(upper, NON_OPERATION_NAMES[i]) == 0) {
       found = 1;
-      break;
-    }
-  }
-
-  /* BR has condition-code suffixes: BR, BRn, BRz, BRp, BRnz, BRnzp, ... */
-  if (!found && upper[0] == 'B' && upper[1] == 'R') {
-    found = 1;
-    for (size_t i = 2; upper[i] != '\0'; i++) {
-      if (upper[i] != 'N' && upper[i] != 'Z' && upper[i] != 'P') {
-        found = 0;
-        break;
-      }
     }
   }
 
@@ -267,55 +255,13 @@ void print_assembly_instruction(const AssemblyInstruction *instruction) {
 }
 
 /* ================================================================== *
- * PASS 2 support: symbol table, sizing, encoding, object-file dump
+ * PASS 2 support: sizing, encoding, object-file dump
  *
- * All of this is deliberately self-contained in assembler.c so the
- * milestone stays runnable while operations.c is mid-refactor. The
- * long-term home for encoding is an `assemble` function pointer on the
- * Operation table (mirror of the VM's `execute`) — see project debt.
+ * The symbol table lives in assembler/symbol_table.c and the per-operation
+ * encoders in assembler/operation.c (the mirror of the VM's `execute`). What
+ * remains here is the two-pass driver, directive sizing/encoding (until the
+ * directive table lands in M3), and the trap-alias fallback (until M2).
  * ================================================================== */
-
-/* --- symbol table: label -> address, a growable array of records ---
-   Linear scan on lookup, exactly like register_by_name — at assembly
-   scale (tens/hundreds of labels) a hash table would be premature. */
-typedef struct {
-  char *label;        /* OWNED copy of the label text */
-  uint16_t address;
-} Symbol;
-
-typedef struct {
-  Symbol *data;
-  int length;
-  int capacity;
-} SymbolTable;
-
-static void symbol_table_insert(SymbolTable *table, const char *label, uint16_t address) {
-  if (table->length == table->capacity) {
-    table->capacity = table->capacity ? table->capacity * 2 : 8;
-    table->data = realloc(table->data, (size_t) table->capacity * sizeof *table->data);
-  }
-  table->data[table->length].label = strdup(label);
-  table->data[table->length].address = address;
-  table->length++;
-}
-
-/* Returns 1 and writes *out on hit; 0 on miss. */
-static int symbol_table_get(const SymbolTable *table, const char *label, uint16_t *out) {
-  for (int i = 0; i < table->length; i++) {
-    if (strcmp(table->data[i].label, label) == 0) {
-      *out = table->data[i].address;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-static void symbol_table_free(SymbolTable *table) {
-  for (int i = 0; i < table->length; i++) {
-    free(table->data[i].label);
-  }
-  free(table->data);
-}
 
 /* --- trap aliases: mnemonic -> trap vector (the vector goes in bits 7-0
    of a TRAP instruction). Returns 1 on match. --- */
@@ -343,127 +289,21 @@ static int assembly_instruction_machine_code_length(const AssemblyInstruction *l
   return 1;                                                     /* ordinary instruction */
 }
 
-/* Resolve a label to a PC-relative offset, masked to `bits` and range-checked.
-   PC-relative because the LC-3 adds the offset to the *incremented* PC, so the
-   base is (instr_addr + 1). Sets *ok = 0 (and leaves it if already 0) on error. */
-static uint16_t symbol_table_compute_pc_offset(const SymbolTable *table, const char *label,
-                          uint16_t instr_addr, int bits, int *ok) {
-  uint16_t target;
-  if (!symbol_table_get(table, label, &target)) {
-    fprintf(stderr, "error: undefined label '%s'\n", label);
-    *ok = 0;
-    return 0;
-  }
-  int offset = (int) target - (int) (instr_addr + 1);
-  int min = -(1 << (bits - 1));
-  int max =  (1 << (bits - 1)) - 1;
-  if (offset < min || offset > max) {
-    fprintf(stderr, "error: label '%s' unreachable (offset %d exceeds %d-bit field)\n",
-            label, offset, bits);
-    *ok = 0;
-    return 0;
-  }
-  return (uint16_t) (offset & ((1 << bits) - 1));
-}
-
-/* Mask a signed immediate to `bits`, range-checking first. The mask alone IS
-   two's-complement encoding (-5 & 0x1F == 0x1B, which sign_extend recovers);
-   the check exists because out-of-range values would otherwise wrap silently
-   (#16 in imm5 would read back as -16). Sets *ok = 0 on error. */
-static uint16_t immediate_value_to_bits(int value, int bits, int *ok) {
-  int min = -(1 << (bits - 1));
-  int max =  (1 << (bits - 1)) - 1;
-  if (value < min || value > max) {
-    fprintf(stderr, "error: immediate %d does not fit in a signed %d-bit field [%d, %d]\n",
-            value, bits, min, max);
-    *ok = 0;
-    return 0;
-  }
-  return (uint16_t) (value & ((1 << bits) - 1));
-}
-
-static uint16_t operand_register_get_code(const Operand *op) {
-  assert(op->type == OPERAND_REGISTER);
-  return op->as.reg->code;
-}
-
 /* Encode one ORDINARY instruction line (not a directive) into its 16-bit word.
-   Operands are already classified; we trust well-formed input here and only
-   error on unresolved/out-of-range labels — richer validation is future work. */
+   Opcodes resolve through the assembler operation table's per-op `encode`; the
+   only case that is not (yet) an Operation is a trap alias (GETC, OUT, ...),
+   which encodes to a TRAP word — handled inline until the trap table lands. */
 static uint16_t assembly_instruction_ordinary_to_bits(const AssemblyInstruction *line,
                                     const char *upper, const SymbolTable *table, int *ok) {
-  const Operand *op = line->operands;
-
-  /* ADD / AND share a shape: reg-reg or reg-imm5 selected by bit 5. */
-  if (strcmp(upper, "ADD") == 0 || strcmp(upper, "AND") == 0) {
-    uint16_t opc = (upper[0] == 'A' && upper[1] == 'D') ? 0x1 : 0x5;
-    uint16_t word = (uint16_t) ((opc << 12) | (operand_register_get_code(&op[0]) << 9) | (operand_register_get_code(&op[1]) << 6));
-    if (op[2].type == OPERAND_REGISTER) {
-      word |= operand_register_get_code(&op[2]);                     /* bit 5 = 0, SR2 in bits 2-0 */
-    } else {
-      word |= (uint16_t) ((1 << 5) | immediate_value_to_bits(op[2].as.integer, 5, ok));  /* bit 5 = 1, imm5 */
-    }
-    return word;
+  const AssemblyOperation *assembly_operation = assembly_operation_by_name(upper);
+  if (assembly_operation != NULL) {
+    return assembly_operation->encode(line, table, ok);
   }
-
-  if (strcmp(upper, "NOT") == 0)
-    return (uint16_t) ((0x9 << 12) | (operand_register_get_code(&op[0]) << 9) | (operand_register_get_code(&op[1]) << 6) | 0x3F);
-
-  /* BR[nzp]: the condition bits live in the mnemonic suffix. Bare BR = BRnzp. */
-  if (upper[0] == 'B' && upper[1] == 'R') {
-    uint16_t nzp = 0;
-    const char *cc = upper + 2;
-    if (*cc == '\0') {
-      nzp = 0x7;
-    } else {
-      for (; *cc; cc++) {
-        if      (*cc == 'N') nzp |= 0x4;
-        else if (*cc == 'Z') nzp |= 0x2;
-        else if (*cc == 'P') nzp |= 0x1;
-      }
-    }
-    return (uint16_t) ((0x0 << 12) | (nzp << 9) | symbol_table_compute_pc_offset(table, op[0].as.label, line->address, 9, ok));
-  }
-
-  if (strcmp(upper, "JMP") == 0) return (uint16_t) ((0xC << 12) | (operand_register_get_code(&op[0]) << 6));
-  if (strcmp(upper, "RET") == 0) return (uint16_t) ((0xC << 12) | (0x7 << 6));  /* JMP R7 */
-
-  if (strcmp(upper, "JSR")  == 0)
-    return (uint16_t) ((0x4 << 12) | (1 << 11) | symbol_table_compute_pc_offset(table, op[0].as.label, line->address, 11, ok));
-  if (strcmp(upper, "JSRR") == 0)
-    return (uint16_t) ((0x4 << 12) | (operand_register_get_code(&op[0]) << 6));
-
-  /* PC-relative load/stores: opcode | DR/SR | PCoffset9. */
-  struct { const char *name; uint16_t opc; } pcrel[] = {
-    { "LD", 0x2 }, { "LDI", 0xA }, { "LEA", 0xE }, { "ST", 0x3 }, { "STI", 0xB },
-  };
-  for (size_t i = 0; i < sizeof pcrel / sizeof pcrel[0]; i++) {
-    if (strcmp(upper, pcrel[i].name) == 0)
-      return (uint16_t) ((pcrel[i].opc << 12) | (operand_register_get_code(&op[0]) << 9)
-                         | symbol_table_compute_pc_offset(table, op[1].as.label, line->address, 9, ok));
-  }
-
-  /* base+offset load/stores: opcode | DR/SR | BaseR | offset6. */
-  if (strcmp(upper, "LDR") == 0 || strcmp(upper, "STR") == 0) {
-    uint16_t opc = (upper[0] == 'L') ? 0x6 : 0x7;
-    return (uint16_t) ((opc << 12) | (operand_register_get_code(&op[0]) << 9) | (operand_register_get_code(&op[1]) << 6)
-                       | immediate_value_to_bits(op[2].as.integer, 6, ok));
-  }
-
-  if (strcmp(upper, "TRAP") == 0) {
-    /* trapvect8 is UNSIGNED (a vector-table index), unlike imm5/offset6. */
-    int vector = op[0].as.integer;
-    if (vector < 0 || vector > 0xFF) {
-      fprintf(stderr, "error: trap vector %d does not fit in 8 bits [0, 255]\n", vector);
-      *ok = 0;
-      return 0;
-    }
-    return (uint16_t) ((0xF << 12) | vector);
-  }
-  if (strcmp(upper, "RTI")  == 0) return (uint16_t) (0x8 << 12);
 
   uint16_t vector;
-  if (trap_vector(upper, &vector)) return (uint16_t) ((0xF << 12) | vector);
+  if (trap_vector(upper, &vector)) {
+    return (uint16_t) ((0xF << 12) | vector);
+  }
 
   fprintf(stderr, "error: unknown operation name '%s'\n", line->operation_name);
   *ok = 0;

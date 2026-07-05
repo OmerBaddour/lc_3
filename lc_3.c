@@ -3,12 +3,12 @@
 #include <stdint.h>
 #include <signal.h>
 
-#include "registers.h"
-#include "memory.h"
-#include "operations.h"
-#include "trap.h"
-#include "io.h"
-#include "util.h"
+#include "core/registers.h"
+#include "core/memory.h"
+#include "virtual_machine/operation.h"
+#include "virtual_machine/trap.h"
+#include "virtual_machine/io.h"
+#include "core/util.h"
 
 int main(int argc, const char *argv[]) {
   /* load the single image argument */
@@ -43,101 +43,49 @@ int main(int argc, const char *argv[]) {
     uint16_t instruction = read_memory(memory, registers[REGISTER_PROGRAM_COUNTER.code]++);
     uint16_t operation = instruction >> 12;
 
-    switch (operation) {
-      case OP_ADD: {
-        operation_add(instruction, registers);
-        break;
-      }
-      case OP_AND: {
-        operation_and(instruction, registers);
-        break;
-      }
-      case OP_NOT: {
-        operation_not(instruction, registers);
-        break;
-      }
-      case OP_BR: {
-        operation_br(instruction, registers);
-        break;
-      }
-      case OP_JMP: {
-        operation_jmp(instruction, registers);
-        break;
-      }
-      case OP_JSR: {
-        operation_jsr(instruction, registers);
-        break;
-      }
-      case OP_LD: {
-        operation_ld(instruction, registers, memory);
-        break;
-      }
-      case OP_LDI: {
-        operation_ldi(instruction, registers, memory);
-        break;
-      }
-      case OP_LDR: {
-        operation_ldr(instruction, registers, memory);
-        break;
-      }
-      case OP_LEA: {
-        operation_lea(instruction, registers);
-        break;
-      }
-      case OP_ST: {
-        operation_st(instruction, registers, memory);
-        break;
-      }
-      case OP_STI: {
-        operation_sti(instruction, registers, memory);
-        break;
-      }
-      case OP_STR: {
-        operation_str(instruction, registers, memory);
-        break;
-      }
-      case OP_TRAP: {
-        /*
-        15-12 11-8 8-0
-        1111  0000 trapvect8
-        */
-        registers[REGISTER_R7.code] = registers[REGISTER_PROGRAM_COUNTER.code];
-        uint16_t trapvect_8 = instruction & 0xFF;
+    if (operation == OP_TRAP) {
+      /*
+      15-12 11-8 8-0
+      1111  0000 trapvect8
+      */
+      registers[REGISTER_R7.code] = registers[REGISTER_PROGRAM_COUNTER.code];
+      uint16_t trapvect_8 = instruction & 0xFF;
 
-        switch (trapvect_8) {
-          case TRAP_GETC: {
-            trap_getc(registers, stdin);
-            break;
-          }
-          case TRAP_OUT: {
-            trap_out(registers, stdout);
-            break;
-          }
-          case TRAP_PUTS: {
-            trap_puts(memory, registers, stdout);
-            break;
-          }
-          case TRAP_IN: {
-            trap_in(registers, stdin, stdout);
-            break;
-          }
-          case TRAP_PUTSP: {
-            trap_putsp(memory, registers, stdout);
-            break;
-          }
-          case TRAP_HALT: {
-            printf("Halting\n");
-            running = 0;
-            break;
-          }
+      switch (trapvect_8) {
+        case TRAP_GETC: {
+          trap_getc(registers, stdin);
+          break;
         }
-        break;
+        case TRAP_OUT: {
+          trap_out(registers, stdout);
+          break;
+        }
+        case TRAP_PUTS: {
+          trap_puts(memory, registers, stdout);
+          break;
+        }
+        case TRAP_IN: {
+          trap_in(registers, stdin, stdout);
+          break;
+        }
+        case TRAP_PUTSP: {
+          trap_putsp(memory, registers, stdout);
+          break;
+        }
+        case TRAP_HALT: {
+          printf("Halting\n");
+          running = 0;
+          break;
+        }
       }
-      case OP_RES:
-      case OP_RTI:
-      default:
-        /* bad operation */
+    } else {
+      /* every other opcode dispatches through the VM operation table */
+      const VirtualMachineOperation *vm_operation = virtual_machine_operation_by_code(operation);
+      if (vm_operation == NULL || vm_operation->execute == NULL) {
+        /* opcodes with no runtime behavior (OP_RES, OP_RTI) */
         abort();
+      }
+      vm_operation->execute(instruction, registers, memory);
     }
   }
 

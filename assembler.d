@@ -1,3 +1,3 @@
-assembler.o: assembler.c src/assembler.h src/registers.h
-src/assembler.h:
-src/registers.h:
+assembler.o: assembler.c src/assembler/assembler.h src/core/registers.h
+src/assembler/assembler.h:
+src/core/registers.h:

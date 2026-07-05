@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
-#include "operations.h"
-#include "registers.h"
+#include "virtual_machine/operation.h"
+#include "core/registers.h"
+#include "core/util.h"       /* sign_extend */
 
 /* memory-touching ops take a memory[] array; each test owns a local one, so
    tests stay isolated (normal addresses never hit the keyboard path) */
@@ -10,6 +11,23 @@
 /* build an instruction with op in 15-12, dr in 11-9, sr1 in 8-6, imm5 mode */
 static uint16_t encode_imm(uint16_t op, uint16_t dr, uint16_t sr1, uint16_t imm5) {
   return (op << 12) | (dr << 9) | (sr1 << 6) | (1 << 5) | (imm5 & 0x1F);
+}
+
+static void test_operation_tables(void) {
+  /* base table: code <-> canonical name, defined once in core/operation.c */
+  assert(operation_by_code(OP_ADD) == &OPERATION_ADD);
+  assert(operation_by_code(OP_TRAP) == &OPERATION_TRAP);
+  assert(operation_by_code(OPERATION_COUNT) == NULL);   /* out of range */
+  assert(operation_by_name("LDR") == &OPERATION_LDR);
+  assert(operation_by_name("nope") == NULL);
+  assert(operation_by_name("ADD")->code == OP_ADD);
+
+  /* VM subclass: behavioral opcodes have an execute; RES/RTI/TRAP do not */
+  const VirtualMachineOperation *add = virtual_machine_operation_by_code(OP_ADD);
+  assert(add != NULL && add->operation == &OPERATION_ADD && add->execute == operation_add);
+  assert(virtual_machine_operation_by_code(OP_RES) == NULL);
+  assert(virtual_machine_operation_by_code(OP_RTI) == NULL);
+  assert(virtual_machine_operation_by_code(OP_TRAP) == NULL);
 }
 
 static void test_sign_extend(void) {
@@ -25,13 +43,13 @@ static void test_operation_add(void) {
   // /* ADD R0, R1, R2 (register mode): op=0001 dr=000 sr1=001 0 00 sr2=010 */
   // registers_local[REGISTER_R2.code] = 7;
   // uint16_t instruction = (0x1 << 12) | (REGISTER_R0.code << 9) | (REGISTER_R1.code << 6) | (0 << 5) | REGISTER_R2.code;
-  // operation_add(instruction, registers_local);
+  // operation_add(instruction, registers_local, NULL);
   // assert(registers_local[REGISTER_R0.code] == 12);
   // assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
 
   // /* ADD R0, R1, #-1 (immediate mode) */
   // instruction = encode_imm(0x1, REGISTER_R0.code, REGISTER_R1.code, 0x1F); /* imm5 = -1 */
-  // operation_add(instruction, registers_local);
+  // operation_add(instruction, registers_local, NULL);
   // assert(registers_local[REGISTER_R0.code] == 4);
   // assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
 }
@@ -41,14 +59,14 @@ static void test_operation_and(void) {
   registers_local[REGISTER_R1.code] = 0xFF0F;
   /* AND R0, R1, #0x0F (immediate) -> 0x000F */
   uint16_t instruction = encode_imm(0x5, REGISTER_R0.code, REGISTER_R1.code, 0x0F);
-  operation_and(instruction, registers_local);
+  operation_and(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R0.code] == 0x000F);
   assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
 
   /* AND that yields zero sets the zero flag */
   registers_local[REGISTER_R1.code] = 0x00F0;
   instruction = encode_imm(0x5, REGISTER_R0.code, REGISTER_R1.code, 0x0F);
-  operation_and(instruction, registers_local);
+  operation_and(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R0.code] == 0);
   assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_ZERO);
 }
@@ -58,7 +76,7 @@ static void test_operation_not(void) {
   registers_local[REGISTER_R1.code] = 0x0000;
   /* NOT R0, R1: op=1001 dr=000 sr1=001 1 11111 */
   uint16_t instruction = (0x9 << 12) | (REGISTER_R0.code << 9) | (REGISTER_R1.code << 6) | 0x3F;
-  operation_not(instruction, registers_local);
+  operation_not(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R0.code] == 0xFFFF);
   assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_NEGATIVE);
 }
@@ -69,13 +87,13 @@ static void test_operation_br(void) {
   registers_local[REGISTER_PROCESSOR_STATUS.code] = CONDITION_FLAG_ZERO;
   /* BRz #5: taken because COND == ZRO */
   uint16_t instruction = (0x0 << 12) | (0 << 11) | (1 << 10) | (0 << 9) | 0x005;
-  operation_br(instruction, registers_local);
+  operation_br(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_PROGRAM_COUNTER.code] == 0x3005);
 
   /* BRn #5: not taken because COND != NEG */
   registers_local[REGISTER_PROGRAM_COUNTER.code] = 0x3000;
   instruction = (0x0 << 12) | (1 << 11) | (0 << 10) | (0 << 9) | 0x005;
-  operation_br(instruction, registers_local);
+  operation_br(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_PROGRAM_COUNTER.code] == 0x3000);
 }
 
@@ -84,7 +102,7 @@ static void test_operation_jmp(void) {
   registers_local[REGISTER_R2.code] = 0x4321;
   /* JMP R2: op=1100 000 baseR=010 000000 */
   uint16_t instruction = (0xC << 12) | (REGISTER_R2.code << 6);
-  operation_jmp(instruction, registers_local);
+  operation_jmp(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_PROGRAM_COUNTER.code] == 0x4321);
 }
 
@@ -93,7 +111,7 @@ static void test_operation_jsr(void) {
   registers_local[REGISTER_PROGRAM_COUNTER.code] = 0x3000;
   /* JSR #10 (offset mode): op=0100 1 PCoffset11 */
   uint16_t instruction = (0x4 << 12) | (1 << 11) | 0x00A;
-  operation_jsr(instruction, registers_local);
+  operation_jsr(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R7.code] == 0x3000); /* return address saved */
   assert(registers_local[REGISTER_PROGRAM_COUNTER.code] == 0x300A);
 
@@ -101,7 +119,7 @@ static void test_operation_jsr(void) {
   registers_local[REGISTER_PROGRAM_COUNTER.code] = 0x3000;
   registers_local[REGISTER_R3.code] = 0x5000;
   instruction = (0x4 << 12) | (0 << 11) | (REGISTER_R3.code << 6);
-  operation_jsr(instruction, registers_local);
+  operation_jsr(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R7.code] == 0x3000);
   assert(registers_local[REGISTER_PROGRAM_COUNTER.code] == 0x5000);
 }
@@ -111,7 +129,7 @@ static void test_operation_lea(void) {
   registers_local[REGISTER_PROGRAM_COUNTER.code] = 0x3000;
   /* LEA R0, #4: op=1110 dr=000 PCoffset9 */
   uint16_t instruction = (0xE << 12) | (REGISTER_R0.code << 9) | 0x004;
-  operation_lea(instruction, registers_local);
+  operation_lea(instruction, registers_local, NULL);
   assert(registers_local[REGISTER_R0.code] == 0x3004);
   assert(registers_local[REGISTER_PROCESSOR_STATUS.code] == CONDITION_FLAG_POSITIVE);
 }
@@ -188,6 +206,7 @@ static void test_operation_str(void) {
 }
 
 int main(void) {
+  test_operation_tables();
   test_sign_extend();
   test_operation_add();
   test_operation_and();

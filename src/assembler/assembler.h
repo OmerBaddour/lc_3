@@ -2,7 +2,7 @@
 #define ASSEMBLER_H
 
 #include <stdint.h>
-#include "registers.h"   /* for `Register` and `register_by_name` */
+#include "core/registers.h"   /* for `Register` and `register_by_name` */
 
 /*
   An operand is *exactly one of* a few things: a register (R0), an integer

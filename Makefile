@@ -5,7 +5,7 @@ CFLAGS := -Isrc -fno-common -Wall -Wextra -MMD -MP
 # --- discovery: just drop files in src/ or tests/, no edits needed ---
 BIN       := lc_3
 MAIN_SRC  := lc_3.c                      # the .c that holds main()
-LIB_SRCS  := $(wildcard src/*.c)         # everything compiled into the VM *and* tests
+LIB_SRCS  := $(shell find src -name '*.c') # everything compiled into the VM *and* tests (recurses core/virtual_machine/assembler)
 TEST_SRCS := $(wildcard tests/*.c)       # one main() per file => one test binary each
 
 # the assembler is a second program: a thin main() at the root, with all the

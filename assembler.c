@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "assembler.h"
+#include "assembler/assembler.h"
 
 /* ------------------------------------------------------------------ *
  * driver: parse -> assemble -> write object file (+ a listing)

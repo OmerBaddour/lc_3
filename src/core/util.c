@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "util.h"
-#include "registers.h"
-#include "memory.h"
-#include "io.h"
+#include "core/util.h"
+#include "core/registers.h"
+#include "core/memory.h"
+#include "virtual_machine/io.h"
 
 /*
 LC_3 helpers
@@ -14,6 +14,15 @@ LC_3 helpers
 
 uint16_t swap16(uint16_t x){
   return (x << 8) | (x >> 8);
+}
+
+uint16_t sign_extend(uint16_t x, int bit_count) {
+  /* sign extend x with bit_count to 16 bits, respecting negatives */
+  if ((x >> (bit_count-1)) & 0x1) {
+    /* negate by extending with 1s */
+    x = x | (0xFFFF << bit_count);
+  }
+  return x;
 }
 
 uint16_t read_image_file(FILE* file) {

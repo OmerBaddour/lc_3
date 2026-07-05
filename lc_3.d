@@ -1,8 +1,10 @@
-lc_3.o: lc_3.c src/registers.h src/memory.h src/operations.h src/trap.h \
-  src/io.h src/util.h
-src/registers.h:
-src/memory.h:
-src/operations.h:
-src/trap.h:
-src/io.h:
-src/util.h:
+lc_3.o: lc_3.c src/core/registers.h src/core/memory.h \
+  src/virtual_machine/operation.h src/core/operation.h \
+  src/virtual_machine/trap.h src/virtual_machine/io.h src/core/util.h
+src/core/registers.h:
+src/core/memory.h:
+src/virtual_machine/operation.h:
+src/core/operation.h:
+src/virtual_machine/trap.h:
+src/virtual_machine/io.h:
+src/core/util.h:

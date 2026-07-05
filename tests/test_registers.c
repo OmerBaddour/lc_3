@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "registers.h"
+#include "core/registers.h"
 
 static void test_set_positive_flag(void) {
   uint16_t registers_local[REGISTER_COUNT] = {0};

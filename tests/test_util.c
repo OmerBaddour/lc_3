@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "util.h"
+#include "core/util.h"
 
 static void test_trim(void) {
   char *string;
