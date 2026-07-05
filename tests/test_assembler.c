@@ -343,10 +343,10 @@ static void test_errors(void) {
 }
 
 /* ------------------------------------------------------------------ *
- * end to end: hello_world.asm -> exact object-file bytes
+ * end to end: hello world source -> exact object-file bytes
  * ------------------------------------------------------------------ */
 static void test_hello_world_object_file(void) {
-  FILE *input = fopen("hello_world.asm", "r");
+  FILE *input = fopen("assembly/hello_world/code.asm", "r");
   assert(input != NULL);  /* run from the repo root (as `make test` does) */
 
   AssemblyInstruction **program = NULL;
@@ -372,11 +372,19 @@ static void test_hello_world_object_file(void) {
   assert(write_object_file(obj_path, origin, program, count) == 1);
   free_assembly_program(program, count);
 
-  /* the known-good object file, hand-assembled: origin, LEA, PUTS, HALT,
-     then "Hello World!" one char per word, then the NUL word — big-endian. */
+  /* the known-good object file, hand-assembled (big-endian):
+       0x3000  origin
+       0xE004  LEA  R0, HELLO_STR   ; DR=R0, PCoffset9 = 0x3005 - 0x3001 = 4
+       0xF022  PUTS
+       0x200F  LD   R0, NEWLINE     ; DR=R0, PCoffset9 = 0x3012 - 0x3003 = 15
+       0xF021  OUT
+       0xF025  HALT
+       "Hello World!" one char per word, then the NUL word
+       0x000A  NEWLINE .FILL 0x000A */
   const uint16_t expected_words[] = {
-    0x3000, 0xE002, 0xF022, 0xF025,
+    0x3000, 0xE004, 0xF022, 0x200F, 0xF021, 0xF025,
     'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!', 0x0000,
+    0x000A,
   };
   const int n = (int) (sizeof expected_words / sizeof expected_words[0]);
 

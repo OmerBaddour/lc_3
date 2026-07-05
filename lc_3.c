@@ -51,32 +51,17 @@ int main(int argc, const char *argv[]) {
       registers[REGISTER_R7.code] = registers[REGISTER_PROGRAM_COUNTER.code];
       uint16_t trapvect_8 = instruction & 0xFF;
 
-      switch (trapvect_8) {
-        case TRAP_GETC: {
-          trap_getc(registers, stdin);
-          break;
-        }
-        case TRAP_OUT: {
-          trap_out(registers, stdout);
-          break;
-        }
-        case TRAP_PUTS: {
-          trap_puts(memory, registers, stdout);
-          break;
-        }
-        case TRAP_IN: {
-          trap_in(registers, stdin, stdout);
-          break;
-        }
-        case TRAP_PUTSP: {
-          trap_putsp(memory, registers, stdout);
-          break;
-        }
-        case TRAP_HALT: {
-          printf("Halting\n");
-          running = 0;
-          break;
-        }
+      const VirtualMachineTrap *vm_trap = virtual_machine_trap_by_code(trapvect_8);
+      if (vm_trap == NULL) {
+        /* unknown trap vector */
+        abort();
+      }
+      if (vm_trap->execute == NULL) {
+        /* HALT: the one trap that stops the fetch loop (only main can do this) */
+        printf("Halting\n");
+        running = 0;
+      } else {
+        vm_trap->execute(memory, registers, stdin, stdout);
       }
     } else {
       /* every other opcode dispatches through the VM operation table */

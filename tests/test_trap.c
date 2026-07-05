@@ -8,7 +8,7 @@ static void test_trap_getc(void) {
   uint16_t registers_local[REGISTER_COUNT] = {0};
   char data[] = "A";
   FILE *mock_stdin = fmemopen(data, sizeof(data), "r");
-  trap_getc(registers_local, mock_stdin);
+  trap_getc(NULL, registers_local, mock_stdin, NULL);
   assert(registers_local[REGISTER_R0.code] == 'A');
   fclose(mock_stdin);
 }
@@ -18,7 +18,7 @@ static void test_trap_out(void) {
   char buffer[2] = {0};
   registers_local[REGISTER_R0.code] = 'A';
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
-  trap_out(registers_local, mock_stdout);
+  trap_out(NULL, registers_local, NULL, mock_stdout);
   assert(buffer[0] == 'A');
   fclose(mock_stdout);
 }
@@ -36,7 +36,7 @@ static void test_trap_puts(void) {
 
   char buffer[64] = {0};
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
-  trap_puts(memory_local, registers_local, mock_stdout);
+  trap_puts(memory_local, registers_local, NULL, mock_stdout);
   long written = ftell(mock_stdout); /* exact number of bytes emitted */
   fclose(mock_stdout);
 
@@ -50,7 +50,7 @@ static void test_trap_in(void) {
   FILE *mock_stdin = fmemopen(buffer_stdin, sizeof(buffer_stdin), "r");
   char buffer_stdout[64] = {0};
   FILE *mock_stdout = fmemopen(buffer_stdout, sizeof(buffer_stdout), "w");
-  trap_in(registers_local, mock_stdin, mock_stdout);
+  trap_in(NULL, registers_local, mock_stdin, mock_stdout);
   
   assert(registers_local[REGISTER_R0.code] == (uint16_t)'A');
   assert(strcmp(buffer_stdout, "Enter character: A") == 0);
@@ -80,7 +80,7 @@ static void test_trap_putsp(void) {
 
   char buffer[64] = {0};
   FILE *mock_stdout = fmemopen(buffer, sizeof(buffer), "w");
-  trap_putsp(memory_local, registers_local, mock_stdout);
+  trap_putsp(memory_local, registers_local, NULL, mock_stdout);
   long written = ftell(mock_stdout); /* exact number of bytes emitted */
   fclose(mock_stdout);
 
