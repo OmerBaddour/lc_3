@@ -2,10 +2,11 @@ scratchpad/
 .DS_Store
 *.obj
 *.o
-lc_3
+/lc_3
+/assembler
+/disassembler
 
 # compiled test binaries (extensionless); keep the .c sources (.o/.d stay ignored via *.o etc.)
 tests/test_*
 !tests/test_*.c
-assembler
 *.d
