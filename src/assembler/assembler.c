@@ -273,7 +273,7 @@ void print_assembly_instruction(const AssemblyInstruction *instruction) {
    counter in pass 1 and the emit size in pass 2). --- */
 static int assembly_instruction_machine_code_length(const AssemblyInstruction *line, const char *upper) {
   if (upper == NULL) return 0;                                  /* label-only line */
-  const Directive *directive = directive_by_name(upper);
+  const AssemblyDirective *directive = assembly_directive_by_name(upper);
   if (directive != NULL) return directive->size(line);
   return 1;                                                     /* ordinary instruction or trap alias */
 }
@@ -306,7 +306,7 @@ static int assembly_instruction_compute_machine_codes(AssemblyInstruction *line,
 
   if (upper == NULL) return 1;  /* label-only line: occupies no program words */
 
-  const Directive *directive = directive_by_name(upper);
+  const AssemblyDirective *directive = assembly_directive_by_name(upper);
   if (directive != NULL) {
     /* directives that emit nothing (.ORIG, .END) have a NULL encoder */
     return directive->encode ? directive->encode(line, table) : 1;

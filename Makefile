@@ -13,15 +13,21 @@ TEST_SRCS := $(wildcard tests/*.c)       # one main() per file => one test binar
 ASM_BIN      := assembler
 ASM_SRC      := assembler.c
 
+# the disassembler is a third program: a thin main() at the root, with all the
+# real logic in src/disassembler/ (part of LIB_SRCS, so tests link it too).
+DIS_BIN      := disassembler
+DIS_SRC      := disassembler.c
+
 # --- derived names ---
 MAIN_OBJ     := $(MAIN_SRC:.c=.o)
 LIB_OBJS     := $(LIB_SRCS:.c=.o)
 TEST_BINS    := $(TEST_SRCS:.c=)         # tests/test_registers.c -> tests/test_registers
 ASM_OBJS     := $(ASM_SRC:.c=.o) $(LIB_OBJS)
-ALL_OBJS     := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o) $(ASM_SRC:.c=.o)
+DIS_OBJS     := $(DIS_SRC:.c=.o) $(LIB_OBJS)
+ALL_OBJS     := $(MAIN_OBJ) $(LIB_OBJS) $(TEST_SRCS:.c=.o) $(ASM_SRC:.c=.o) $(DIS_SRC:.c=.o)
 DEPS         := $(ALL_OBJS:.o=.d)
 
-.PHONY: all assembler test memcheck clean
+.PHONY: all assembler disassembler test memcheck clean
 
 all: $(BIN)
 
@@ -31,6 +37,10 @@ $(BIN): $(MAIN_OBJ) $(LIB_OBJS)
 
 # link the assembler: its main + the libs it needs
 $(ASM_BIN): $(ASM_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+# link the disassembler: its main + the libs it needs
+$(DIS_BIN): $(DIS_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 # compile any .c -> .o (one rule covers src/, tests/, and lc_3.c)
@@ -56,7 +66,7 @@ memcheck: $(TEST_BINS)
 	done
 
 clean:
-	rm -rf $(BIN) $(ASM_BIN) $(ALL_OBJS) $(TEST_BINS) $(DEPS)
+	rm -rf $(BIN) $(ASM_BIN) $(DIS_BIN) $(ALL_OBJS) $(TEST_BINS) $(DEPS)
 
 # pull in the auto-generated header dependencies (ignored if absent, e.g. first build)
 -include $(DEPS)

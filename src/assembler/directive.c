@@ -75,25 +75,26 @@ static int directive_stringz_encode(AssemblyInstruction *line, const SymbolTable
 }
 
 /* ------------------------------------------------------------------ *
- * the directive table + lookup
+ * the assembler subclass table + lookup: each entry pairs a shared Directive
+ * base (its name) with this side's size/encode behavior. Indexed the same way
+ * ASSEMBLY_OPERATIONS is — by pairing, not by opcode, since directives have no
+ * numeric code.
  * ------------------------------------------------------------------ */
-const Directive DIRECTIVE_ORIG    = { ".ORIG",    directive_zero_size,    NULL };
-const Directive DIRECTIVE_END     = { ".END",     directive_zero_size,    NULL };
-const Directive DIRECTIVE_FILL    = { ".FILL",    directive_fill_size,    directive_fill_encode };
-const Directive DIRECTIVE_BLKW    = { ".BLKW",    directive_blkw_size,    directive_blkw_encode };
-const Directive DIRECTIVE_STRINGZ = { ".STRINGZ", directive_stringz_size, directive_stringz_encode };
+static const AssemblyDirective ASSEMBLY_DIRECTIVE_ORIG    = { &DIRECTIVE_ORIG,    directive_zero_size,    NULL };
+static const AssemblyDirective ASSEMBLY_DIRECTIVE_END     = { &DIRECTIVE_END,     directive_zero_size,    NULL };
+static const AssemblyDirective ASSEMBLY_DIRECTIVE_FILL    = { &DIRECTIVE_FILL,    directive_fill_size,    directive_fill_encode };
+static const AssemblyDirective ASSEMBLY_DIRECTIVE_BLKW    = { &DIRECTIVE_BLKW,    directive_blkw_size,    directive_blkw_encode };
+static const AssemblyDirective ASSEMBLY_DIRECTIVE_STRINGZ = { &DIRECTIVE_STRINGZ, directive_stringz_size, directive_stringz_encode };
 
-static const Directive *const DIRECTIVES[] = {
-    &DIRECTIVE_ORIG, &DIRECTIVE_END, &DIRECTIVE_FILL,
-    &DIRECTIVE_BLKW, &DIRECTIVE_STRINGZ,
+static const AssemblyDirective *const ASSEMBLY_DIRECTIVES[DIRECTIVE_COUNT] = {
+    &ASSEMBLY_DIRECTIVE_ORIG, &ASSEMBLY_DIRECTIVE_END, &ASSEMBLY_DIRECTIVE_FILL,
+    &ASSEMBLY_DIRECTIVE_BLKW, &ASSEMBLY_DIRECTIVE_STRINGZ,
 };
 
-#define DIRECTIVE_COUNT (sizeof DIRECTIVES / sizeof DIRECTIVES[0])
-
-const Directive *directive_by_name(const char *upper_name) {
-  for (size_t i = 0; i < DIRECTIVE_COUNT; i++) {
-    if (strcmp(DIRECTIVES[i]->name, upper_name) == 0) {
-      return DIRECTIVES[i];
+const AssemblyDirective *assembly_directive_by_name(const char *upper_name) {
+  for (int i = 0; i < DIRECTIVE_COUNT; i++) {
+    if (strcmp(ASSEMBLY_DIRECTIVES[i]->directive->name, upper_name) == 0) {
+      return ASSEMBLY_DIRECTIVES[i];
     }
   }
   return NULL;

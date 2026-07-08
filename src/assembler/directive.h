@@ -1,14 +1,14 @@
 #ifndef ASSEMBLER_DIRECTIVE_H
 #define ASSEMBLER_DIRECTIVE_H
 
-#include "assembler/assembler.h"      /* AssemblyInstruction */
-#include "assembler/symbol_table.h"   /* SymbolTable */
+#include "core/assembly_directives.h"   /* Directive (the shared base) */
+#include "assembler/assembler.h"        /* AssemblyInstruction */
+#include "assembler/symbol_table.h"     /* SymbolTable */
 
 /*
-  An assembler directive (.ORIG, .END, .FILL, .BLKW, .STRINGZ). Unlike an
-  Operation or a Trap, a directive has NO presence in the running machine — it
-  only steers assembly — so there is a single struct here, not a core base plus
-  per-context subclasses.
+  The assembler's "subclass" of Directive: it points at the shared base (for its
+  name) and adds the two behaviors that steer assembly — the mirror of how
+  AssemblyOperation wraps Operation with `encode`.
 
   Two behaviors, mirroring the two passes:
     - `size`   : how many program words this line occupies (drives the location
@@ -20,24 +20,16 @@
                  symbol table is passed to every encoder; those that do not need
                  it (void) it.
 */
-typedef struct Directive {
-  const char *name;   /* canonical spelling, upper-cased, incl. the dot: ".FILL" */
+typedef struct AssemblyDirective {
+  const Directive *directive;
   int (*size)(const AssemblyInstruction *line);
   int (*encode)(AssemblyInstruction *line, const SymbolTable *table);
-} Directive;
+} AssemblyDirective;
 
-/* The single source of truth for each directive. Exposed (like OPERATION_* and
-   TRAP_*) so callers that must special-case a specific directive compare pointers
-   against these globals — `directive_by_name(x) == &DIRECTIVE_ORIG` — instead of
-   re-spelling ".ORIG" in a strcmp. */
-extern const Directive DIRECTIVE_ORIG;
-extern const Directive DIRECTIVE_END;
-extern const Directive DIRECTIVE_FILL;
-extern const Directive DIRECTIVE_BLKW;
-extern const Directive DIRECTIVE_STRINGZ;
-
-/* Resolve a mnemonic (already upper-cased) to its Directive, or NULL if the
-   token is not a directive (an opcode, a trap alias, or a plain label). */
-const Directive *directive_by_name(const char *upper_name);
+/* Resolve a mnemonic (already upper-cased) to its AssemblyDirective, or NULL if
+   the token is not a directive. For a bare identity check ("is this .ORIG?")
+   the core directive_by_name is enough; use this only when the size/encode
+   behavior is needed. */
+const AssemblyDirective *assembly_directive_by_name(const char *upper_name);
 
 #endif /* ASSEMBLER_DIRECTIVE_H */
